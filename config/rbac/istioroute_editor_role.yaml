@@ -1,0 +1,27 @@
+# permissions for end users to edit istioroutes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: mesh-agent
+    app.kubernetes.io/managed-by: kustomize
+  name: istioroute-editor-role
+rules:
+- apiGroups:
+  - mesh-manager.meshmanager.com
+  resources:
+  - istioroutes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mesh-manager.meshmanager.com
+  resources:
+  - istioroutes/status
+  verbs:
+  - get

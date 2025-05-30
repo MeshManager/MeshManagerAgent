@@ -1,0 +1,9 @@
+apiVersion: mesh-manager.meshmanager.com/v1
+kind: IstioRoute
+metadata:
+  labels:
+    app.kubernetes.io/name: mesh-agent
+    app.kubernetes.io/managed-by: kustomize
+  name: istioroute-sample
+spec:
+  # TODO(user): Add fields here

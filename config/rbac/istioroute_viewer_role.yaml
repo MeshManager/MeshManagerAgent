@@ -1,0 +1,23 @@
+# permissions for end users to view istioroutes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: mesh-agent
+    app.kubernetes.io/managed-by: kustomize
+  name: istioroute-viewer-role
+rules:
+- apiGroups:
+  - mesh-manager.meshmanager.com
+  resources:
+  - istioroutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - mesh-manager.meshmanager.com
+  resources:
+  - istioroutes/status
+  verbs:
+  - get
