@@ -25,17 +25,42 @@ import (
 
 // IstioRouteSpec defines the desired state of IstioRoute
 type IstioRouteSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Services []ServiceConfig `json:"services"`
+}
 
-	// Foo is an example field of IstioRoute. Edit istioroute_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+type ServiceConfig struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Type      string `json:"type"` // Canary, StickyCanary, Dependent, None
+
+	// +kubebuilder:validation:MinItems=2
+	// +kubebuilder:validation:MaxItems=2
+	CommitHashes []string `json:"commitHashes,omitempty"`
+
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	Ratio int `json:"ratio,omitempty"`
+
+	Dependencies []Dependency `json:"dependencies,omitempty"`
+
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=3600
+	SessionDuration int `json:"sessionDuration,omitempty"`
+}
+
+type Dependency struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	CommitHashes []string `json:"commitHashes"`
 }
 
 // IstioRouteStatus defines the observed state of IstioRoute
 type IstioRouteStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions      []metav1.Condition `json:"conditions,omitempty"`
+	LastAppliedHash string             `json:"lastAppliedHash,omitempty"`
 }
 
 // +kubebuilder:object:root=true
