@@ -59,7 +59,6 @@ type OutlierDetection struct {
 
 	// +kubebuilder:validation:Pattern=`^([0-9]+(s|m|h))+$`
 	Interval string `json:"interval,omitempty"`
-
 }
 
 type Dependency struct {
