@@ -10,4 +10,14 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: mesh-agent
 repo: github.com/MeshManager/MeshManagerAgent.git
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: meshmanager.com
+  group: mesh-manager
+  kind: IstioRoute
+  path: github.com/MeshManager/MeshManagerAgent.git/api/v1
+  version: v1
 version: "3"

@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- mesh-manager_v1_istioroute.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
