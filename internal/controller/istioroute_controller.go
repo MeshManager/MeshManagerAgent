@@ -18,7 +18,7 @@ package controller
 
 import (
 	"context"
-
+	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,9 +48,7 @@ type IstioRouteReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-
-	// TODO(user): your logic here
-
+	fmt.Print("yaml 변경됨")
 	return ctrl.Result{}, nil
 }
 

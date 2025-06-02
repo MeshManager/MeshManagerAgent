@@ -20,10 +20,13 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	"github.com/MeshManager/MeshManagerAgent.git/metrics_service"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -162,8 +165,35 @@ func main() {
 		os.Exit(1)
 	}
 
+	metricSvc := metrics_service.New(mgr.GetClient())
+	setupLog.Info("Metric service initialized", "client", metricSvc != nil)
+
+	ctx := ctrl.SetupSignalHandler()
+
+	// 주기적 실행 설정
+	go func() {
+		setupLog.Info("Starting metric collector goroutine")
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				setupLog.Info("Starting metric collection cycle")
+				if err := metricSvc.CollectAndSend(ctx); err != nil {
+					setupLog.Error(err, "Metric collection failed")
+				} else {
+					setupLog.Info("Metric collection completed")
+				}
+			case <-ctx.Done():
+				setupLog.Info("Stopping metric collector")
+				return
+			}
+		}
+	}()
+
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
