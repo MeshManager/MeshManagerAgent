@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -167,19 +166,27 @@ func main() {
 	}
 
 	metricSvc := metrics_service.New(mgr.GetClient())
+	setupLog.Info("Metric service initialized", "client", metricSvc != nil)
+
+	ctx := ctrl.SetupSignalHandler()
 
 	// 주기적 실행 설정
 	go func() {
+		setupLog.Info("Starting metric collector goroutine")
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ticker.C:
-				setupLog.Info("Sending metrics...")
-				if err := metricSvc.CollectAndSend(context.Background()); err != nil {
-					setupLog.Error(err, "Failed to send metrics")
+				setupLog.Info("Starting metric collection cycle")
+				if err := metricSvc.CollectAndSend(ctx); err != nil {
+					setupLog.Error(err, "Metric collection failed")
+				} else {
+					setupLog.Info("Metric collection completed")
 				}
-			case <-mgr.Elected():
+			case <-ctx.Done():
+				setupLog.Info("Stopping metric collector")
 				return
 			}
 		}
