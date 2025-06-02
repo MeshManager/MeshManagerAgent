@@ -18,11 +18,6 @@ package controller
 
 import (
 	"context"
-	"github.com/MeshManager/MeshManagerAgent.git/internal/service"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,11 +48,6 @@ type IstioRouteReconciler struct {
 func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	err := r.sendMetric(ctx)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -66,46 +56,4 @@ func (r *IstioRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&meshmanagerv1.IstioRoute{}).
 		Complete(r)
-}
-
-func (r *IstioRouteReconciler) sendMetric(ctx context.Context) error {
-	// 1. istio-injection=enabled인 네임스페이스 조회
-	nsList := &corev1.NamespaceList{}
-	labelSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{"istio-injection": "enabled"},
-	}
-	selector, _ := metav1.LabelSelectorAsSelector(&labelSelector)
-	err := r.List(ctx, nsList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
-		return err
-	}
-
-	for _, ns := range nsList.Items {
-		// 서비스 조회
-		svcList := &corev1.ServiceList{}
-		err := r.List(ctx, svcList, client.InNamespace(ns.Name))
-		if err != nil {
-			continue
-		}
-
-		// 디플로이먼트 조회
-		deployList := &appsv1.DeploymentList{}
-		err = r.List(ctx, deployList, client.InNamespace(ns.Name))
-		if err != nil {
-			continue
-		}
-
-		// 3. 데이터 가공
-		payload := map[string]interface{}{
-			"namespace":   ns.Name,
-			"services":    service.ExtractServiceInfo(svcList),
-			"deployments": service.ExtractDeploymentInfo(deployList),
-		}
-
-		// 4. REST API 호출
-		if err := service.SendMetric(payload); err != nil {
-			// 재시도 로직 추가 가능
-		}
-	}
-	return nil
 }

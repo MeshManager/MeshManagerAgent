@@ -1,4 +1,4 @@
-package service
+package metrics_service
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
