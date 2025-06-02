@@ -21,10 +21,19 @@ func ExtractServiceInfo(list *corev1.ServiceList) []map[string]interface{} {
 func ExtractDeploymentInfo(list *appsv1.DeploymentList) []map[string]interface{} {
 	var deployments []map[string]interface{}
 	for _, deploy := range list.Items {
+
+		containers := make([]map[string]string, 0)
+		for _, c := range deploy.Spec.Template.Spec.Containers {
+			containers = append(containers, map[string]string{
+				"name":  c.Name,
+				"image": c.Image,
+			})
+		}
+
 		deployments = append(deployments, map[string]interface{}{
 			"name":       deploy.Name,
 			"replicas":   *deploy.Spec.Replicas,
-			"containers": deploy.Spec.Template.Spec.Containers,
+			"containers": containers,
 			"podLabels":  deploy.Spec.Template.Labels,
 		})
 	}
