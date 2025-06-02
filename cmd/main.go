@@ -168,28 +168,22 @@ func main() {
 
 	metricSvc := metrics_service.New(mgr.GetClient())
 
-	ctx := context.Background()
-
-	// sendMetric 주기적 실행
+	// 주기적 실행 설정
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				err := metricSvc.CollectAndSend(ctx)
-				if err != nil {
-					return
+				setupLog.Info("Sending metrics...")
+				if err := metricSvc.CollectAndSend(context.Background()); err != nil {
+					setupLog.Error(err, "Failed to send metrics")
 				}
+			case <-mgr.Elected():
+				return
 			}
 		}
 	}()
-
-	// manager 시작
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
-	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
