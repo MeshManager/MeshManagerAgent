@@ -78,7 +78,7 @@ func (s *MetricService) sendData(namespace string, svcList *corev1.ServiceList, 
 func SendMetric(data map[string]interface{}) error {
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post(
-		"https://192.168.0.137:8080/resources",
+		"http://192.168.0.137:8080/resources",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
