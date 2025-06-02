@@ -31,7 +31,7 @@ type IstioRouteSpec struct {
 type ServiceConfig struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
-	Type      string `json:"type"` // Canary, StickyCanary, Dependent, None
+	Type      string `json:"type"` // Canary, StickyCanary
 
 	// +kubebuilder:validation:MinItems=2
 	// +kubebuilder:validation:MaxItems=2
@@ -46,6 +46,20 @@ type ServiceConfig struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=3600
 	SessionDuration int `json:"sessionDuration,omitempty"`
+
+	OutlierDetection *OutlierDetection `json:"outlierDetection,omitempty"`
+}
+
+type OutlierDetection struct {
+	// +kubebuilder:validation:Minimum=0
+	Consecutive5xxErrors int `json:"consecutive5xxErrors,omitempty"`
+
+	// +kubebuilder:validation:Minimum=0
+	ConsecutiveGatewayErrors int `json:"consecutiveGatewayErrors,omitempty"`
+
+	// +kubebuilder:validation:Pattern=`^([0-9]+(s|m|h))+$`
+	Interval string `json:"interval,omitempty"`
+
 }
 
 type Dependency struct {
