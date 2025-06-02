@@ -26,19 +26,24 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		return err
 	}
 
-	// 2. 각 네임스페이스 처리
+	// 2. 모든 데이터 수집
+	var allData []map[string]interface{}
 	for _, ns := range nsList.Items {
 		svcList, deployList, err := s.listResources(ctx, ns.Name)
 		if err != nil {
 			continue
 		}
 
-		// 3. 데이터 전송
-		if err := s.sendData(ns.Name, svcList, deployList); err != nil {
-			return err
+		payload := map[string]interface{}{
+			"namespace":   ns.Name,
+			"services":    ExtractServiceInfo(svcList),
+			"deployments": ExtractDeploymentInfo(deployList),
 		}
+		allData = append(allData, payload)
 	}
-	return nil
+
+	// 3. 통합 데이터 전송
+	return SendMetric(map[string]interface{}{"namespaces": allData})
 }
 
 // Helper functions
