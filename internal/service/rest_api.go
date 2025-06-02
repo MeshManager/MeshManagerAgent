@@ -10,7 +10,7 @@ import (
 func SendMetric(data map[string]interface{}) error {
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post(
-		"https://your-api-endpoint.com/resources",
+		"https://192.168.0.137:8080/resources",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
