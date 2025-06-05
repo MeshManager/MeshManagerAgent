@@ -167,6 +167,13 @@ func (r *IstioRouteReconciler) cleanupEnvoyFilters(ctx context.Context, ir *mesh
 	for i := range envoyFilterList.Items {
 		ef := envoyFilterList.Items[i]
 
+		logger.Info("삭제 대상 EnvoyFilter 정보",
+			"name", ef.Name,
+			"namespace", ef.Namespace,
+			"labels", ef.Labels,
+			"annotations", ef.Annotations,
+		)
+
 		if err := r.Delete(ctx, ef); err != nil {
 			logger.Error(err, "EnvoyFilter 삭제 실패", "name", ef.Name)
 		}
