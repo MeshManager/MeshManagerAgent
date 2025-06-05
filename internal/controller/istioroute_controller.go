@@ -85,9 +85,9 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		if svcConfig.Type == meshmanagerv1.CanaryType || svcConfig.Type == meshmanagerv1.StickyCanaryType {
 			ef := generator.GenerateEnvoyFilter(svcConfig)
-			if err := ctrl.SetControllerReference(&istioRoute, ef, r.Scheme); err != nil {
-				return ctrl.Result{}, err
-			}
+			//if err := ctrl.SetControllerReference(&istioRoute, ef, r.Scheme); err != nil {
+			//	return ctrl.Result{}, err
+			//}
 			if err := r.CreateOrUpdate(ctx, ef); err != nil {
 				logger.Error(err, "failed to manage EnvoyFilter")
 				return ctrl.Result{}, err

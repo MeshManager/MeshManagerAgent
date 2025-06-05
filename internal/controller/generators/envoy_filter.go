@@ -10,11 +10,18 @@ import (
 	"strings"
 )
 
-func GenerateEnvoyFilter(svc meshmanagerv1.ServiceConfig) *istiov1beta1.EnvoyFilter {
+func GenerateEnvoyFilter(svc meshmanagerv1.ServiceConfig, istioRoute *meshmanagerv1.IstioRoute) *istiov1beta1.EnvoyFilter {
 	return &istiov1beta1.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-filter", svc.Name),
 			Namespace: "istio-system",
+			Labels: map[string]string{
+				"managed-by":           "istioroute-controller",
+				"istioroute-name":      istioRoute.Name,
+				"istioroute-namespace": istioRoute.Namespace,
+				"service-name":         svc.Name,
+				"service-type":         string(svc.Type),
+			},
 		},
 		Spec: apiv1beta1.EnvoyFilter{
 			WorkloadSelector: &apiv1beta1.WorkloadSelector{
