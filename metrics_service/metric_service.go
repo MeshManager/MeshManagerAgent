@@ -78,20 +78,6 @@ func (s *MetricService) listResources(ctx context.Context, namespace string) (*c
 	return svcList, deployList, nil
 }
 
-func (s *MetricService) sendData(namespace string, svcList *corev1.ServiceList, deployList *appsv1.DeploymentList) error {
-	payload := map[string]interface{}{
-		"namespace":   namespace,
-		"services":    ExtractServiceInfo(svcList),
-		"deployments": ExtractDeploymentInfo(deployList),
-	}
-
-	// namespace에 istio injection 설정이 안되었을 경우
-	if payload == nil {
-		return nil
-	}
-	return SendMetric(payload)
-}
-
 func SendMetric(data map[string]interface{}) error {
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post(
