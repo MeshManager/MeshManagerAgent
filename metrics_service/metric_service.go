@@ -77,6 +77,11 @@ func (s *MetricService) sendData(namespace string, svcList *corev1.ServiceList, 
 		"services":    ExtractServiceInfo(svcList),
 		"deployments": ExtractDeploymentInfo(deployList),
 	}
+
+	// namespace에 istio injection 설정이 안되었을 경우
+	if payload == nil {
+		return nil
+	}
 	return SendMetric(payload)
 }
 
