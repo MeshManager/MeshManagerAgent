@@ -3,9 +3,11 @@ package generators
 import (
 	"fmt"
 	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 	apiv1beta1 "istio.io/api/networking/v1beta1"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.DestinationRule {
@@ -19,16 +21,20 @@ func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Dest
 		},
 	}
 
-	// Add subsets
-	for _, hash := range svc.CommitHashes {
-		dr.Spec.Subsets = append(dr.Spec.Subsets, &apiv1beta1.Subset{
-			Name:   hash,
-			Labels: map[string]string{"commit": hash},
-		})
+	baseType := svc.Type
+
+	// Add subsets for Canary and StickyCanary types
+	if baseType == meshmanagerv1.CanaryType || baseType == meshmanagerv1.StickyCanaryType {
+		for _, hash := range svc.CommitHashes {
+			dr.Spec.Subsets = append(dr.Spec.Subsets, &apiv1beta1.Subset{
+				Name:   hash,
+				Labels: map[string]string{"commit": hash},
+			})
+		}
 	}
 
-	// Configure traffic policy
-	if svc.Type == meshmanagerv1.StickyCanaryType {
+	// Configure traffic policy for StickyCanary
+	if baseType == meshmanagerv1.StickyCanaryType {
 		dr.Spec.TrafficPolicy = &apiv1beta1.TrafficPolicy{
 			LoadBalancer: &apiv1beta1.LoadBalancerSettings{
 				LbPolicy: &apiv1beta1.LoadBalancerSettings_ConsistentHash{
@@ -40,12 +46,34 @@ func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Dest
 				},
 			},
 		}
+
+		// Add outlier detection if configured
+		if svc.OutlierDetection != nil {
+			addOutlierDetection(dr, svc.OutlierDetection)
+		}
 	}
 
-	// Add outlier detection if configured
-	if svc.OutlierDetection != nil {
-		//TODO outlier Detection 제작
+	// For dependent services, add basic traffic policy if not already configured
+	isDependent := len(svc.Dependencies) > 0
+	if isDependent && dr.Spec.TrafficPolicy == nil {
+		dr.Spec.TrafficPolicy = &apiv1beta1.TrafficPolicy{}
 	}
 
 	return dr
+}
+
+func addOutlierDetection(dr *istiov1beta1.DestinationRule, config *meshmanagerv1.OutlierDetection) {
+	intervalDuration, _ := time.ParseDuration(config.Interval)
+
+	if dr.Spec.TrafficPolicy == nil {
+		dr.Spec.TrafficPolicy = &apiv1beta1.TrafficPolicy{}
+	}
+
+	dr.Spec.TrafficPolicy.OutlierDetection = &apiv1beta1.OutlierDetection{
+		ConsecutiveErrors:  int32(config.Consecutive5xxErrors),
+		Interval:           durationpb.New(intervalDuration),
+		BaseEjectionTime:   durationpb.New(30 * time.Second),
+		MaxEjectionPercent: 100,
+		MinHealthPercent:   50,
+	}
 }

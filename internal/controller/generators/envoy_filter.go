@@ -7,12 +7,13 @@ import (
 	apiv1beta1 "istio.io/api/networking/v1alpha3"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
 
 func GenerateEnvoyFilter(svc meshmanagerv1.ServiceConfig) *istiov1beta1.EnvoyFilter {
 	return &istiov1beta1.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-envoyfilter", svc.Name),
+			Name:      fmt.Sprintf("%s-filter", svc.Name),
 			Namespace: "istio-system",
 		},
 		Spec: apiv1beta1.EnvoyFilter{
@@ -45,25 +46,21 @@ func GenerateEnvoyFilter(svc meshmanagerv1.ServiceConfig) *istiov1beta1.EnvoyFil
 }
 
 func buildLuaFilterConfig(svc meshmanagerv1.ServiceConfig) *structpb.Struct {
-	luaScript := fmt.Sprintf(`
-		function envoy_on_request(request_handle)
-			local headers = request_handle:headers()
-			local host = headers:get(":authority")
-			
-			if host == "%s.%s.svc.cluster.local" then
-				local jwt = headers:get("jwt")
-				if jwt then
-					local hash = 0
-					for i = 1, #jwt do
-						hash = (hash * 31 + jwt:byte(i)) %% 100
-					end
-					
-					headers:add("x-canary-version", hash < %d and "%s" or "%s")
-					headers:add("x-session-id", string.format("%%s-%%d", host, hash))
-				end
-			end
-		end
-	`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+	baseType := svc.Type
+	isDependent := len(svc.Dependencies) > 0
+
+	var luaScript string
+
+	switch {
+	case baseType == meshmanagerv1.CanaryType && isDependent:
+		luaScript = buildCanaryDependentLuaScript(svc)
+	case baseType == meshmanagerv1.StickyCanaryType && isDependent:
+		luaScript = buildStickyCanaryDependentLuaScript(svc)
+	case baseType == meshmanagerv1.CanaryType:
+		luaScript = buildCanaryLuaScript(svc)
+	case baseType == meshmanagerv1.StickyCanaryType:
+		luaScript = buildStickyCanaryLuaScript(svc)
+	}
 
 	return &structpb.Struct{
 		Fields: map[string]*structpb.Value{
@@ -76,4 +73,124 @@ func buildLuaFilterConfig(svc meshmanagerv1.ServiceConfig) *structpb.Struct {
 			}),
 		},
 	}
+}
+
+func buildCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
+	if len(svc.CommitHashes) < 2 {
+		return ""
+	}
+
+	return fmt.Sprintf(`
+function envoy_on_request(request_handle)
+	local headers = request_handle:headers()
+	local host = headers:get(":authority")
+	
+	if host == "%s.%s.svc.cluster.local" then
+		local jwt = headers:get("jwt")
+		if jwt then
+			local hash = 0
+			for i = 1, #jwt do
+				hash = (hash * 31 + jwt:byte(i)) %% 100
+			end
+			
+			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+		end
+	end
+end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+}
+
+func buildStickyCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
+	if len(svc.CommitHashes) < 2 {
+		return ""
+	}
+
+	return fmt.Sprintf(`
+function envoy_on_request(request_handle)
+	local headers = request_handle:headers()
+	local host = headers:get(":authority")
+	
+	if host == "%s.%s.svc.cluster.local" then
+		local jwt = headers:get("jwt")
+		if jwt then
+			local hash = 0
+			for i = 1, #jwt do
+				hash = (hash * 31 + jwt:byte(i)) %% 100
+			end
+			
+			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+			headers:add("x-session-id", tostring(math.floor(hash)))
+		end
+	end
+end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+}
+
+func buildCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
+	if len(svc.CommitHashes) < 2 {
+		return ""
+	}
+
+	// Build dependency header additions
+	var depHeaderLines []string
+	for _, dep := range svc.Dependencies {
+		if len(dep.CommitHashes) > 0 {
+			line := fmt.Sprintf(`			headers:add("x-%s-version", "%s")`, dep.Name, dep.CommitHashes[0])
+			depHeaderLines = append(depHeaderLines, line)
+		}
+	}
+	depHeaderCode := strings.Join(depHeaderLines, "\n")
+
+	return fmt.Sprintf(`
+function envoy_on_request(request_handle)
+	local headers = request_handle:headers()
+	local host = headers:get(":authority")
+	
+	if host == "%s.%s.svc.cluster.local" then
+		local jwt = headers:get("jwt")
+		if jwt then
+			local hash = 0
+			for i = 1, #jwt do
+				hash = (hash * 31 + jwt:byte(i)) %% 100
+			end
+			
+			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+%s
+		end
+	end
+end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
+}
+
+func buildStickyCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
+	if len(svc.CommitHashes) < 2 {
+		return ""
+	}
+
+	// Build dependency header additions
+	var depHeaderLines []string
+	for _, dep := range svc.Dependencies {
+		if len(dep.CommitHashes) > 0 {
+			line := fmt.Sprintf(`			headers:add("x-%s-version", "%s")`, dep.Name, dep.CommitHashes[0])
+			depHeaderLines = append(depHeaderLines, line)
+		}
+	}
+	depHeaderCode := strings.Join(depHeaderLines, "\n")
+
+	return fmt.Sprintf(`
+function envoy_on_request(request_handle)
+	local headers = request_handle:headers()
+	local host = headers:get(":authority")
+	
+	if host == "%s.%s.svc.cluster.local" then
+		local jwt = headers:get("jwt")
+		if jwt then
+			local hash = 0
+			for i = 1, #jwt do
+				hash = (hash * 31 + jwt:byte(i)) %% 100
+			end
+			
+			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+			headers:add("x-session-id", tostring(math.floor(hash)))
+%s
+		end
+	end
+end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
 }

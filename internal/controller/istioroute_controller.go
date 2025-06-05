@@ -83,7 +83,7 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 
-		if svcConfig.Type == meshmanagerv1.StickyCanaryType {
+		if svcConfig.Type == meshmanagerv1.CanaryType || svcConfig.Type == meshmanagerv1.StickyCanaryType {
 			ef := generator.GenerateEnvoyFilter(svcConfig)
 			if err := ctrl.SetControllerReference(&istioRoute, ef, r.Scheme); err != nil {
 				return ctrl.Result{}, err
