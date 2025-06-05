@@ -42,8 +42,15 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		allData = append(allData, payload)
 	}
 
+	var namespacesData interface{}
+	if len(allData) == 0 {
+		namespacesData = nil
+	} else {
+		namespacesData = allData
+	}
+
 	// 3. 통합 데이터 전송
-	return SendMetric(map[string]interface{}{"namespaces": allData})
+	return SendMetric(map[string]interface{}{"namespaces": namespacesData})
 }
 
 // Helper functions
