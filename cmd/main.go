@@ -41,6 +41,11 @@ import (
 	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
 	"github.com/MeshManager/MeshManagerAgent.git/internal/controller"
 	// +kubebuilder:scaffold:imports
+
+	// Istio networking 타입들 추가
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 )
 
 var (
@@ -53,6 +58,10 @@ func init() {
 
 	utilruntime.Must(meshmanagerv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
+	utilruntime.Must(istionetworkingv1alpha3.AddToScheme(scheme))
+
+	utilruntime.Must(istionetworkingv1beta1.AddToScheme(scheme))
 }
 
 func main() {
