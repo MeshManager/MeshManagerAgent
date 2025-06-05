@@ -1,4 +1,4 @@
-module github.com/MeshManager/MeshManagerAgent.git
+module github.com/MeshManager/MeshManagerAgent
 
 go 1.24.0
 
@@ -8,6 +8,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	google.golang.org/protobuf v1.36.6
+	istio.io/api v1.26.0-alpha.0.0.20250418093427-399a2989a851
 	istio.io/client-go v1.26.1
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1
@@ -88,7 +89,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	istio.io/api v1.26.0-alpha.0.0.20250418093427-399a2989a851 // indirect
 	k8s.io/apiextensions-apiserver v0.33.1 // indirect
 	k8s.io/apiserver v0.33.1 // indirect
 	k8s.io/component-base v0.33.1 // indirect

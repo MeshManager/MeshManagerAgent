@@ -26,9 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
+	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent/api/v1"
 
-	generator "github.com/MeshManager/MeshManagerAgent.git/internal/controller/generators"
+	generator "github.com/MeshManager/MeshManagerAgent/internal/controller/generators"
 )
 
 // IstioRouteReconciler reconciles a IstioRoute object

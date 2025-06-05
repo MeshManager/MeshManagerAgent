@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
+	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent/api/v1"
 )
 
 var _ = Describe("IstioRoute Controller", func() {
