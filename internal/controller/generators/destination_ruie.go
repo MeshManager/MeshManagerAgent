@@ -2,7 +2,7 @@ package generators
 
 import (
 	"fmt"
-	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
+	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent/api/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	apiv1beta1 "istio.io/api/networking/v1beta1"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
