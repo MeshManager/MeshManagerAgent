@@ -24,12 +24,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent/api/v1"
 
 	generator "github.com/MeshManager/MeshManagerAgent/internal/controller/generators"
 )
+
+const EnvoyFilterFinalizer = "meshmanager.com/envoyfilter-cleanup"
 
 // IstioRouteReconciler reconciles a IstioRoute object
 type IstioRouteReconciler struct {
@@ -96,6 +99,24 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	}
 
+	// Finalizer 추가
+	if !controllerutil.ContainsFinalizer(&istioRoute, EnvoyFilterFinalizer) {
+		controllerutil.AddFinalizer(&istioRoute, EnvoyFilterFinalizer)
+		if err := r.Update(ctx, &istioRoute); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// 삭제 처리
+	if !istioRoute.DeletionTimestamp.IsZero() {
+		if err := r.cleanupEnvoyFilters(ctx, &istioRoute); err != nil {
+			return ctrl.Result{}, err
+		}
+		controllerutil.RemoveFinalizer(&istioRoute, EnvoyFilterFinalizer)
+		return ctrl.Result{}, r.Update(ctx, &istioRoute)
+	}
+
 	//TODO Update Status
 
 	return ctrl.Result{}, nil
@@ -124,4 +145,32 @@ func (r *IstioRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&istiov1beta1.DestinationRule{}).
 		Owns(&istiov1beta1.EnvoyFilter{}).
 		Complete(r)
+}
+
+func (r *IstioRouteReconciler) cleanupEnvoyFilters(ctx context.Context, ir *meshmanagerv1.IstioRoute) error {
+	logger := log.FromContext(ctx)
+	logger.Info("EnvoyFilter 정리 시작", "istioroute", ir.Name)
+
+	envoyFilterList := &istiov1beta1.EnvoyFilterList{}
+	listOpts := []client.ListOption{
+		client.InNamespace("istio-system"),
+		client.MatchingLabels{
+			"owner-istioroute": ir.Name,
+			"owner-namespace":  ir.Namespace,
+		},
+	}
+
+	if err := r.List(ctx, envoyFilterList, listOpts...); err != nil {
+		logger.Error(err, "EnvoyFilter 리스트 조회 실패")
+		return err
+	}
+
+	for i := range envoyFilterList.Items {
+		ef := envoyFilterList.Items[i]
+
+		if err := r.Delete(ctx, ef); err != nil {
+			logger.Error(err, "EnvoyFilter 삭제 실패", "name", ef.Name)
+		}
+	}
+	return nil
 }
