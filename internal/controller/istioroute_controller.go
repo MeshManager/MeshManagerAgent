@@ -155,7 +155,8 @@ func (r *IstioRouteReconciler) cleanupEnvoyFilters(ctx context.Context, ir *mesh
 	listOpts := []client.ListOption{
 		client.InNamespace("istio-system"),
 		client.MatchingLabels{
-			"managed-by": "istioroute-controller",
+			"managed-by":      "istioroute-controller",
+			"istioroute-type": "envoy-filter",
 		},
 	}
 

@@ -19,8 +19,7 @@ func GenerateEnvoyFilter(svc meshmanagerv1.ServiceConfig, istioRoute *meshmanage
 				"managed-by":           "istioroute-controller",
 				"istioroute-name":      istioRoute.Name,
 				"istioroute-namespace": istioRoute.Namespace,
-				"service-name":         svc.Name,
-				"service-type":         string(svc.Type),
+				"istioroute-type":      "envoy-filter",
 			},
 			Annotations: map[string]string{
 				"istioroute-controller/managed":         "true",
