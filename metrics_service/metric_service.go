@@ -50,7 +50,13 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		namespacesData = allData
 	}
 
-	// 3. UUID 수집
+	// 3. 해시 생성 로직 추가
+	hash, err := generateHashFromNamespaces(namespacesData)
+	if err != nil {
+		return fmt.Errorf("해시 생성 실패: %v", err)
+	}
+
+	// 4. UUID 수집
 	uuid, exists := os.LookupEnv("UUID")
 	if !exists {
 		return fmt.Errorf("UUID 환경변수가 필요합니다")
@@ -59,9 +65,10 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
 	}
 
-	// 4. 통합 데이터 전송
+	// 5. 통합 데이터 전송
 	return SendMetric(map[string]interface{}{
 		"uuid":       uuid,
+		"hash":       hash,
 		"namespaces": namespacesData,
 	})
 }
