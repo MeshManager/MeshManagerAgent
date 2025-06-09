@@ -33,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
+	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 

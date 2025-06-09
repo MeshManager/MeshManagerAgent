@@ -26,7 +26,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/MeshManager/MeshManagerAgent.git/metrics_service"
+	"github.com/MeshManager/MeshManagerAgent/metrics_service"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,9 +38,14 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent.git/api/v1"
-	"github.com/MeshManager/MeshManagerAgent.git/internal/controller"
+	meshmanagerv1 "github.com/MeshManager/MeshManagerAgent/api/v1"
+	"github.com/MeshManager/MeshManagerAgent/internal/controller"
 	// +kubebuilder:scaffold:imports
+
+	// Istio networking 타입들 추가
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 )
 
 var (
@@ -53,6 +58,10 @@ func init() {
 
 	utilruntime.Must(meshmanagerv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
+	utilruntime.Must(istionetworkingv1alpha3.AddToScheme(scheme))
+
+	utilruntime.Must(istionetworkingv1beta1.AddToScheme(scheme))
 }
 
 func main() {

@@ -29,9 +29,9 @@ type IstioRouteSpec struct {
 }
 
 type ServiceConfig struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Type      string `json:"type"` // Canary, StickyCanary
+	Name      string      `json:"name"`
+	Namespace string      `json:"namespace"`
+	Type      ServiceType `json:"type"` // Canary, StickyCanary
 
 	// +kubebuilder:validation:MinItems=2
 	// +kubebuilder:validation:MaxItems=2
@@ -49,6 +49,14 @@ type ServiceConfig struct {
 
 	OutlierDetection *OutlierDetection `json:"outlierDetection,omitempty"`
 }
+
+type ServiceType string
+
+const (
+	StandardType     ServiceType = "Standard"
+	CanaryType       ServiceType = "Canary"
+	StickyCanaryType ServiceType = "StickyCanary"
+)
 
 type OutlierDetection struct {
 	// +kubebuilder:validation:Minimum=0

@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/MeshManager/MeshManagerAgent.git/test/utils"
+	"github.com/MeshManager/MeshManagerAgent/test/utils"
 )
 
 const namespace = "mesh-agent-system"

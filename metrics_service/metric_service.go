@@ -42,8 +42,15 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		allData = append(allData, payload)
 	}
 
+	var namespacesData interface{}
+	if len(allData) == 0 {
+		namespacesData = nil
+	} else {
+		namespacesData = allData
+	}
+
 	// 3. 통합 데이터 전송
-	return SendMetric(map[string]interface{}{"namespaces": allData})
+	return SendMetric(map[string]interface{}{"namespaces": namespacesData})
 }
 
 // Helper functions
@@ -69,15 +76,6 @@ func (s *MetricService) listResources(ctx context.Context, namespace string) (*c
 	}
 
 	return svcList, deployList, nil
-}
-
-func (s *MetricService) sendData(namespace string, svcList *corev1.ServiceList, deployList *appsv1.DeploymentList) error {
-	payload := map[string]interface{}{
-		"namespace":   namespace,
-		"services":    ExtractServiceInfo(svcList),
-		"deployments": ExtractDeploymentInfo(deployList),
-	}
-	return SendMetric(payload)
 }
 
 func SendMetric(data map[string]interface{}) error {
