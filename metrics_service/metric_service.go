@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -79,9 +80,19 @@ func (s *MetricService) listResources(ctx context.Context, namespace string) (*c
 }
 
 func SendMetric(data map[string]interface{}) error {
+
+	url, exists := os.LookupEnv("AGENTURL")
+	if !exists {
+		_ = fmt.Errorf("AGENTURL 환경변수가 필요합니다")
+	}
+	if url == "" {
+		_ = fmt.Errorf("AGENTURL 환경변수 값이 비어 있습니다")
+	}
+	fmt.Println(url)
+
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post(
-		"http://192.168.0.137:8080/resources",
+		url,
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
