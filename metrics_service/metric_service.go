@@ -50,8 +50,20 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		namespacesData = allData
 	}
 
-	// 3. 통합 데이터 전송
-	return SendMetric(map[string]interface{}{"namespaces": namespacesData})
+	// 3. UUID 수집
+	uuid, exists := os.LookupEnv("UUID")
+	if !exists {
+		return fmt.Errorf("UUID 환경변수가 필요합니다")
+	}
+	if uuid == "" {
+		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
+	}
+
+	// 4. 통합 데이터 전송
+	return SendMetric(map[string]interface{}{
+		"uuid":       uuid,
+		"namespaces": namespacesData,
+	})
 }
 
 // Helper functions
@@ -83,12 +95,10 @@ func SendMetric(data map[string]interface{}) error {
 
 	url, exists := os.LookupEnv("AGENTURL")
 	if !exists {
-		_ = fmt.Errorf("AGENTURL 환경변수가 필요합니다")
-		return nil
+		return fmt.Errorf("AGENTURL 환경변수가 필요합니다")
 	}
 	if url == "" {
-		_ = fmt.Errorf("AGENTURL 환경변수 값이 비어 있습니다")
-		return nil
+		return fmt.Errorf("AGENTURL 환경변수 값이 비어 있습니다")
 	}
 	fmt.Println(url)
 
