@@ -84,9 +84,11 @@ func SendMetric(data map[string]interface{}) error {
 	url, exists := os.LookupEnv("AGENTURL")
 	if !exists {
 		_ = fmt.Errorf("AGENTURL 환경변수가 필요합니다")
+		return nil
 	}
 	if url == "" {
 		_ = fmt.Errorf("AGENTURL 환경변수 값이 비어 있습니다")
+		return nil
 	}
 	fmt.Println(url)
 
