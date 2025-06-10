@@ -51,7 +51,7 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 	}
 
 	// 3. 해시 생성 로직 추가
-	hash, err := generateHashFromNamespaces(namespacesData)
+	hash, err := GenerateHashFromNamespaces(namespacesData)
 	if err != nil {
 		return fmt.Errorf("해시 생성 실패: %v", err)
 	}
@@ -73,7 +73,7 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 	})
 }
 
-// Helper functions
+// listNamespaces
 func (s *MetricService) listNamespaces(ctx context.Context) (*corev1.NamespaceList, error) {
 	list := &corev1.NamespaceList{}
 	err := s.K8sClient.List(ctx, list, client.MatchingLabels{"istio-injection": "enabled"})

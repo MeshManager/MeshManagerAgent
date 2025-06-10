@@ -40,10 +40,6 @@ type IstioRouteReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=mesh-manager.meshmanager.com,resources=istioroutes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=mesh-manager.meshmanager.com,resources=istioroutes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=mesh-manager.meshmanager.com,resources=istioroutes/finalizers,verbs=update
-
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
@@ -56,7 +52,7 @@ type IstioRouteReconciler struct {
 func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	//나중에 아래 fmt.Print 지울 것
+	//TODO 나중에 아래 fmt.Print 지울 것
 	fmt.Print("yaml 변경됨")
 
 	var istioRoute meshmanagerv1.IstioRoute
@@ -110,7 +106,7 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// 삭제 처리
 	if !istioRoute.DeletionTimestamp.IsZero() {
-		if err := r.cleanupEnvoyFilters(ctx, &istioRoute); err != nil {
+		if err := r.CleanupEnvoyFilters(ctx, &istioRoute); err != nil {
 			return ctrl.Result{}, err
 		}
 		controllerutil.RemoveFinalizer(&istioRoute, EnvoyFilterFinalizer)
@@ -122,6 +118,7 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
+// CreateOrUpdate to apply k8s resource
 func (r *IstioRouteReconciler) CreateOrUpdate(ctx context.Context, obj client.Object) error {
 	key := client.ObjectKeyFromObject(obj)
 	existing := obj.DeepCopyObject().(client.Object)
@@ -147,7 +144,8 @@ func (r *IstioRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *IstioRouteReconciler) cleanupEnvoyFilters(ctx context.Context, ir *meshmanagerv1.IstioRoute) error {
+// CleanupEnvoyFilters to clean up envoy filter resource, For finalizer
+func (r *IstioRouteReconciler) CleanupEnvoyFilters(ctx context.Context, ir *meshmanagerv1.IstioRoute) error {
 	logger := log.FromContext(ctx)
 	logger.Info("EnvoyFilter 정리 시작", "istioroute", ir.Name)
 
