@@ -208,7 +208,6 @@ func main() {
 
 				if err := dynamicSvc.ApplyYAMLFromURL(ctx); err != nil {
 					setupLog.Error(err, "Failed to apply YAML")
-					os.Exit(1)
 				}
 				setupLog.Info("Success to apply YAML")
 			case <-ctx.Done():
