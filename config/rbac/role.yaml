@@ -7,7 +7,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups: [""]
-  resources: ["pods"]
+  resources: ["pods", "namespaces"]
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["services"]
@@ -15,3 +15,6 @@ rules:
 - apiGroups: ["apps"]
   resources: ["deployments"]
   verbs: ["list", "watch"]
+- apiGroups: ["networking.istio.io"]
+  resources: ["virtualservices", "destinationrules", "envoyfilters"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
