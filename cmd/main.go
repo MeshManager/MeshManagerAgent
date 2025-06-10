@@ -26,6 +26,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/MeshManager/MeshManagerAgent/desired_state_service"
 	"github.com/MeshManager/MeshManagerAgent/metrics_service"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -177,10 +178,18 @@ func main() {
 	metricSvc := metrics_service.New(mgr.GetClient())
 	setupLog.Info("Metric service initialized", "client", metricSvc != nil)
 
+	dynamicSvc, err := desired_state_service.NewDynamicService(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "Dynamic service 초기화 실패")
+		os.Exit(1)
+	}
+	setupLog.Info("Dynamic service initialized")
+
 	ctx := ctrl.SetupSignalHandler()
 
 	// 주기적 실행 설정
 	go func() {
+
 		setupLog.Info("Starting metric collector goroutine")
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
@@ -194,6 +203,12 @@ func main() {
 				} else {
 					setupLog.Info("Metric collection completed")
 				}
+
+				if err := dynamicSvc.ApplyYAMLFromURL(ctx); err != nil {
+					setupLog.Error(err, "YAML 적용 실패")
+					os.Exit(1)
+				}
+				setupLog.Info("YAML 적용 성공")
 			case <-ctx.Done():
 				setupLog.Info("Stopping metric collector")
 				return
