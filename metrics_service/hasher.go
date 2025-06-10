@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func generateHashFromNamespaces(data interface{}) (string, error) {
+func GenerateHashFromNamespaces(data interface{}) (string, error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("JSON 마샬링 실패: %v", err)

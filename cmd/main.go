@@ -187,10 +187,12 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
-	// 주기적 실행 설정
+	// 익명 Go routine
 	go func() {
 
 		setupLog.Info("Starting metric collector goroutine")
+
+		//TODO ENV에서 갱신 주기 받아올 것
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -205,10 +207,10 @@ func main() {
 				}
 
 				if err := dynamicSvc.ApplyYAMLFromURL(ctx); err != nil {
-					setupLog.Error(err, "YAML 적용 실패")
+					setupLog.Error(err, "Failed to apply YAML")
 					os.Exit(1)
 				}
-				setupLog.Info("YAML 적용 성공")
+				setupLog.Info("Success to apply YAML")
 			case <-ctx.Done():
 				setupLog.Info("Stopping metric collector")
 				return
@@ -216,6 +218,7 @@ func main() {
 		}
 	}()
 
+	//controller-runtime Manager 시작
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")

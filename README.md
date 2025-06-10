@@ -1,11 +1,21 @@
 # MeshManager-Agent
 사용자 클러스터에 배포되는 Agent입니다.
-=======
-# mesh-agent
-// TODO(user): Add simple overview of use/purpose
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+클러스터에 해당 Agent를 Cluster에 배포해 Istio를 제어합니다.
+
+### 수집 데이터
+"istio-injection": "enabled" Label이 있는 NameSpace의 Resource
+- Deployment
+  - name
+  - replicas
+  - containers [name, image]
+  - podLabels
+- Service
+  - name
+  - type
+  - clusterIP
+  - selector
 
 ## Getting Started
 
@@ -14,6 +24,7 @@
 - docker version 17.03+.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
+- istio Default Profile installed.
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**
@@ -93,7 +104,6 @@ kubectl apply -f https://raw.githubusercontent.com/<org>/mesh-agent/<tag or bran
 ```
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
 **NOTE:** Run `make help` for more information on all potential `make` targets
 
