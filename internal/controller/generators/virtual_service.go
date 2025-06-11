@@ -6,6 +6,7 @@ import (
 	apiv1beta1 "istio.io/api/networking/v1beta1"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"regexp"
 )
 
 func GenerateVirtualService(svc meshmanagerv1.ServiceConfig) *istiov1beta1.VirtualService {
@@ -19,25 +20,37 @@ func GenerateVirtualService(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Virtu
 		},
 	}
 
+	var mainRoutes []*apiv1beta1.HTTPRoute
+
 	baseType := svc.Type
 	isDependent := len(svc.Dependencies) > 0
 
 	switch {
 	case baseType == meshmanagerv1.CanaryType && isDependent:
-		vs.Spec.Http = generateCanaryDependentRoutes(svc)
+		mainRoutes = generateCanaryDependentRoutes(svc)
 	case baseType == meshmanagerv1.StickyCanaryType && isDependent:
-		vs.Spec.Http = generateStickyCanaryDependentRoutes(svc)
+		mainRoutes = generateStickyCanaryDependentRoutes(svc)
 	case baseType == meshmanagerv1.StandardType && isDependent:
-		vs.Spec.Http = generateDependentRoutes(svc)
+		mainRoutes = generateDependentRoutes(svc)
 	case baseType == meshmanagerv1.CanaryType:
-		vs.Spec.Http = generateCanaryRoutes(svc)
+		mainRoutes = generateCanaryRoutes(svc)
 	case baseType == meshmanagerv1.StickyCanaryType:
-		vs.Spec.Http = generateStickyCanaryRoutes(svc)
+		mainRoutes = generateStickyCanaryRoutes(svc)
 	case baseType == meshmanagerv1.StandardType:
-		vs.Spec.Http = generateStandardRoutes(svc)
+		mainRoutes = generateStandardRoutes(svc)
 	default:
-		vs.Spec.Http = generateStandardRoutes(svc)
+		mainRoutes = generateStandardRoutes(svc)
 	}
+
+	var allRoutes []*apiv1beta1.HTTPRoute
+	if len(svc.DarknessReleases) > 0 {
+		drRoutes := generateDarknessReleaseRoutes(svc)
+		allRoutes = append(drRoutes, mainRoutes...)
+	} else {
+		allRoutes = mainRoutes
+	}
+
+	vs.Spec.Http = allRoutes
 
 	return vs
 }
@@ -171,4 +184,44 @@ func generateStandardRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPR
 	}
 
 	return []*apiv1beta1.HTTPRoute{route}
+}
+
+func generateDarknessReleaseRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPRoute {
+	var routes []*apiv1beta1.HTTPRoute
+
+	for _, dr := range svc.DarknessReleases {
+		for _, ip := range dr.IPs {
+			regexPattern := convertSingleIPToRegex(ip)
+
+			route := &apiv1beta1.HTTPRoute{
+				Match: []*apiv1beta1.HTTPMatchRequest{
+					{
+						Headers: map[string]*apiv1beta1.StringMatch{
+							"x-forwarded-for": {
+								MatchType: &apiv1beta1.StringMatch_Regex{
+									Regex: regexPattern,
+								},
+							},
+						},
+					},
+				},
+				Route: []*apiv1beta1.HTTPRouteDestination{
+					{
+						Destination: &apiv1beta1.Destination{
+							Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+							Subset: dr.CommitHash,
+						},
+					},
+				},
+			}
+			routes = append(routes, route)
+		}
+	}
+	return routes
+}
+
+// 단일 IP를 XFF 헤더 검사용 정규식으로 변환
+func convertSingleIPToRegex(ip string) string {
+	escapedIP := regexp.QuoteMeta(ip)
+	return fmt.Sprintf(`(^|, )%s(,|$)`, escapedIP)
 }
