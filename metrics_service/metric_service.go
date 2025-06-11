@@ -125,3 +125,47 @@ func SendMetric(data map[string]interface{}) error {
 	}
 	return nil
 }
+
+// InitConnectAgent to init connection to Backend
+func InitConnectAgent() error {
+	uuid, exists := os.LookupEnv("UUID")
+	if !exists {
+		return fmt.Errorf("UUID 환경변수가 필요합니다")
+	}
+	if uuid == "" {
+		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
+	}
+
+	agentUrl, exists := os.LookupEnv("AGENT_INIT_URL")
+	if !exists {
+		return fmt.Errorf("AGENT_INIT_URL 환경변수가 필요합니다")
+	}
+	if agentUrl == "" {
+		return fmt.Errorf("AGENT_INIT_URL 환경변수 값이 비어 있습니다")
+	}
+
+	data := map[string]string{
+		"name": uuid,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("JSON 마샬링 실패: %v", err)
+	}
+
+	resp, err := http.Post(
+		agentUrl,
+		"application/json",
+		bytes.NewBuffer(jsonData),
+	)
+	if err != nil {
+		return fmt.Errorf("POST 요청 실패: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API 요청 실패: %s", resp.Status)
+	}
+
+	return nil
+}
