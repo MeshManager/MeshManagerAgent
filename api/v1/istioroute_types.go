@@ -48,6 +48,9 @@ type ServiceConfig struct {
 	SessionDuration int `json:"sessionDuration,omitempty"`
 
 	OutlierDetection *OutlierDetection `json:"outlierDetection,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	DarknessReleases []DarknessRelease `json:"darknessReleases,omitempty"`
 }
 
 type ServiceType string
@@ -76,6 +79,16 @@ type Dependency struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	CommitHashes []string `json:"commitHashes"`
+}
+
+type DarknessRelease struct {
+	// +kubebuilder:validation:Required
+	CommitHash string `json:"commitHash"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:Pattern=`^(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}$`
+	IPs []string `json:"ips,omitempty"`
 }
 
 // IstioRouteStatus defines the observed state of IstioRoute
