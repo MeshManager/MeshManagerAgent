@@ -190,6 +190,20 @@ func main() {
 	// 익명 Go routine
 	go func() {
 
+		setupLog.Info("Init Connection to Backend")
+
+		for {
+			if err := metrics_service.InitConnectAgent(); err != nil {
+				setupLog.Error(err, "InitConnectAgent failed")
+				setupLog.Info("Retry after 5 seconds.")
+				time.Sleep(5 * time.Second)
+				setupLog.Info("Retrying!")
+			} else {
+				setupLog.Info("Backend Connected!")
+				break
+			}
+		}
+
 		setupLog.Info("Starting metric collector goroutine")
 
 		//TODO ENV에서 갱신 주기 받아올 것
