@@ -87,7 +87,6 @@ type DarknessRelease struct {
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MaxItems=10
-	// +kubebuilder:validation:Pattern=`^(?:\d{1,3}\.){3}\d{1,3}$`
 	IPs []string `json:"ips,omitempty"`
 }
 
