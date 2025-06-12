@@ -136,6 +136,14 @@ func InitConnectAgent() error {
 		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
 	}
 
+	agentName, exists := os.LookupEnv("AGENT_NAME")
+	if !exists {
+		return fmt.Errorf("AGENT_NAME 환경변수가 필요합니다")
+	}
+	if agentName == "" {
+		return fmt.Errorf("AGENT_NAME 환경변수 값이 비어 있습니다")
+	}
+
 	agentUrl, exists := os.LookupEnv("AGENT_INIT_URL")
 	if !exists {
 		return fmt.Errorf("AGENT_INIT_URL 환경변수가 필요합니다")
@@ -145,7 +153,8 @@ func InitConnectAgent() error {
 	}
 
 	data := map[string]string{
-		"name": uuid,
+		"name":      agentName,
+		"clusterId": uuid,
 	}
 
 	jsonData, err := json.Marshal(data)
