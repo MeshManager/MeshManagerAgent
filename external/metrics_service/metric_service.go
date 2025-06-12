@@ -9,7 +9,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -98,13 +97,11 @@ func (s *MetricService) listResources(ctx context.Context, namespace string) (*c
 
 func SendMetric(data map[string]interface{}) error {
 
-	agentUrl, err := env_service.GetAgentUrl()
-	if err != nil {
-		return fmt.Errorf("agentUrl 로딩 실패: %v", err)
-	}
-	fmt.Println(agentUrl)
+	agentUrl, err := env_service.MakeAgentURL(env_service.SaveClusterState)
 
-	metricUrl, err := env_service.MakeAgentURL(env_service.checkAgentStatus)
+	if err != nil {
+		return fmt.Errorf("URL 생성 실패: %s", err)
+	}
 
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post(
@@ -125,28 +122,20 @@ func SendMetric(data map[string]interface{}) error {
 
 // InitConnectAgent to init connection to Backend
 func InitConnectAgent() error {
-	uuid, exists := os.LookupEnv("UUID")
-	if !exists {
+	uuid, err := env_service.GetAgentUuid()
+	if err != nil {
 		return fmt.Errorf("UUID 환경변수가 필요합니다")
 	}
-	if uuid == "" {
-		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
-	}
 
-	agentName, exists := os.LookupEnv("AGENT_NAME")
-	if !exists {
+	agentName, err := env_service.GetAgentName()
+	if err != nil {
 		return fmt.Errorf("AGENT_NAME 환경변수가 필요합니다")
 	}
-	if agentName == "" {
-		return fmt.Errorf("AGENT_NAME 환경변수 값이 비어 있습니다")
-	}
 
-	agentUrl, exists := os.LookupEnv("AGENT_URL")
-	if !exists {
-		return fmt.Errorf("AGENT_URL 환경변수가 필요합니다")
-	}
-	if agentUrl == "" {
-		return fmt.Errorf("AGENT_URL 환경변수 값이 비어 있습니다")
+	agentUrl, err := env_service.MakeAgentURL(env_service.RegisterAgent)
+
+	if err != nil {
+		return fmt.Errorf("URL 생성 실패: %s", err)
 	}
 
 	data := map[string]string{
