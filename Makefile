@@ -189,11 +189,10 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | \
-	sed -e "s|AGENTURL_PLACEHOLDER|${AGENTURL}|g" \
+	sed -e "s|AGENT_NAME_PLACEHOLDER|${AGENT_NAME}|g" \
 	    -e "s|UUID_PLACEHOLDER|${UUID}|g" \
-	    -e "s|AGENT_NAME_PLACEHOLDER|${AGENT_NAME}|g" \
+	    -e "s|AGENT_URL_PLACEHOLDER|${AGENT_URL}|g" \
 	    -e "s|DESIRED_STATE_URL_PLACEHOLDER|${DESIRED_STATE_URL}|g" | \
-	    -e "s|AGENT_INIT_URL_PLACEHOLDER|${AGENT_INIT_URL}|g" | \
 	$(KUBECTL) apply -f -
 
 .PHONY: undeploy

@@ -19,15 +19,14 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"github.com/MeshManager/MeshManagerAgent/external/desired_state_service"
+	"github.com/MeshManager/MeshManagerAgent/external/metrics_service"
 	"os"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"github.com/MeshManager/MeshManagerAgent/desired_state_service"
-	"github.com/MeshManager/MeshManagerAgent/metrics_service"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

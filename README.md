@@ -46,11 +46,13 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<image> AGENTURL="..." UUID="..." AGENT_NAME="..." DESIRED_STATE_URL="..." AGENT_INIT_URL="..."
+make deploy IMG=<image> UUID="..." AGENT_NAME="..." AGENT_URL="..." DESIRED_STATE_URL="..."
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
 privileges or be logged in as admin.
+
+> **NOTE**: URL은 "https://{url}" 형식으로 넣어주세요
 
 **Create instances of your solution**
 You can apply the samples (examples) from the config/sample:
