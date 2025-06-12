@@ -173,11 +173,13 @@ func generateDependentRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTP
 }
 
 func generateStandardRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPRoute {
+	defaultSubset := getDefaultSubset(svc)
 	route := &apiv1beta1.HTTPRoute{
 		Route: []*apiv1beta1.HTTPRouteDestination{
 			{
 				Destination: &apiv1beta1.Destination{
-					Host: fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+					Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+					Subset: defaultSubset,
 				},
 			},
 		},
@@ -224,4 +226,18 @@ func generateDarknessReleaseRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta
 func convertSingleIPToRegex(ip string) string {
 	escapedIP := regexp.QuoteMeta(ip)
 	return fmt.Sprintf(`(^|, )%s(,|$)`, escapedIP)
+}
+
+func getDefaultSubset(svc meshmanagerv1.ServiceConfig) string {
+	darknessHashes := make(map[string]struct{})
+	for _, dr := range svc.DarknessReleases {
+		darknessHashes[dr.CommitHash] = struct{}{}
+	}
+
+	for _, ch := range svc.CommitHashes {
+		if _, exists := darknessHashes[ch]; !exists {
+			return ch // darkness에 없는 첫 번째 커밋 해시
+		}
+	}
+	return svc.CommitHashes[0] // fallback
 }
