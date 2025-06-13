@@ -46,7 +46,7 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<image> UUID="..." AGENT_NAME="..." AGENT_URL="..." DESIRED_STATE_URL="..."
+make deploy IMG=public.ecr.aws/j8f1l6o6/mesh-agent UUID="..." AGENT_NAME="..." AGENT_URL="..." DESIRED_STATE_URL="..."
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
