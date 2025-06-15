@@ -21,17 +21,16 @@ func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Dest
 		},
 	}
 
-	baseType := svc.Type
-
-	// Add subsets for Canary and StickyCanary types
-	if baseType == meshmanagerv1.CanaryType || baseType == meshmanagerv1.StickyCanaryType {
+	if len(svc.CommitHashes) >= 2 { // +kubebuilder 검증 조건 충족
 		for _, hash := range svc.CommitHashes {
 			dr.Spec.Subsets = append(dr.Spec.Subsets, &apiv1beta1.Subset{
 				Name:   hash,
-				Labels: map[string]string{"commit": hash},
+				Labels: map[string]string{"version": hash},
 			})
 		}
 	}
+
+	baseType := svc.Type
 
 	// Configure traffic policy for StickyCanary
 	if baseType == meshmanagerv1.StickyCanaryType {

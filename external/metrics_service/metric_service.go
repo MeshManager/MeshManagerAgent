@@ -5,10 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MeshManager/MeshManagerAgent/external/env_service"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,13 +56,10 @@ func (s *MetricService) CollectAndSend(ctx context.Context) error {
 		return fmt.Errorf("해시 생성 실패: %v", err)
 	}
 
-	// 4. UUID 수집
-	uuid, exists := os.LookupEnv("UUID")
-	if !exists {
-		return fmt.Errorf("UUID 환경변수가 필요합니다")
-	}
-	if uuid == "" {
-		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
+	// 4. uuid 로딩
+	uuid, err := env_service.GetAgentUuid()
+	if err != nil {
+		return fmt.Errorf("uuid 로딩 실패: %v", err)
 	}
 
 	// 5. 통합 데이터 전송
@@ -100,18 +97,15 @@ func (s *MetricService) listResources(ctx context.Context, namespace string) (*c
 
 func SendMetric(data map[string]interface{}) error {
 
-	url, exists := os.LookupEnv("AGENTURL")
-	if !exists {
-		return fmt.Errorf("AGENTURL 환경변수가 필요합니다")
+	agentUrl, err := env_service.MakeAgentURL(env_service.SaveClusterState)
+
+	if err != nil {
+		return fmt.Errorf("URL 생성 실패: %s", err)
 	}
-	if url == "" {
-		return fmt.Errorf("AGENTURL 환경변수 값이 비어 있습니다")
-	}
-	fmt.Println(url)
 
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post(
-		url,
+		agentUrl,
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
@@ -128,24 +122,25 @@ func SendMetric(data map[string]interface{}) error {
 
 // InitConnectAgent to init connection to Backend
 func InitConnectAgent() error {
-	uuid, exists := os.LookupEnv("UUID")
-	if !exists {
+	uuid, err := env_service.GetAgentUuid()
+	if err != nil {
 		return fmt.Errorf("UUID 환경변수가 필요합니다")
 	}
-	if uuid == "" {
-		return fmt.Errorf("UUID 환경변수 값이 비어 있습니다")
+
+	agentName, err := env_service.GetAgentName()
+	if err != nil {
+		return fmt.Errorf("AGENT_NAME 환경변수가 필요합니다")
 	}
 
-	agentUrl, exists := os.LookupEnv("AGENT_INIT_URL")
-	if !exists {
-		return fmt.Errorf("AGENT_INIT_URL 환경변수가 필요합니다")
-	}
-	if agentUrl == "" {
-		return fmt.Errorf("AGENT_INIT_URL 환경변수 값이 비어 있습니다")
+	agentUrl, err := env_service.MakeAgentURL(env_service.RegisterAgent)
+
+	if err != nil {
+		return fmt.Errorf("URL 생성 실패: %s", err)
 	}
 
 	data := map[string]string{
-		"name": uuid,
+		"name":      agentName,
+		"clusterId": uuid,
 	}
 
 	jsonData, err := json.Marshal(data)
