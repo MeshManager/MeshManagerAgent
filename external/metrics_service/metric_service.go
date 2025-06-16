@@ -164,3 +164,14 @@ func InitConnectAgent() error {
 
 	return nil
 }
+
+func HealthChecker() error {
+
+	url, _ := env_service.MakeAgentURL(env_service.CheckAgentStatus)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("API 요청 실패: %s", resp.Status)
+	}
+
+	return nil
+}
