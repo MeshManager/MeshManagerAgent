@@ -109,6 +109,13 @@ func SendMetric(data map[string]interface{}) error {
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
+
+	//TODO test 후 제거
+	fmt.Println("====== 전송된 JSON 데이터 ======")
+	fmt.Println(string(jsonData)) // JSON 문자열 출력
+	fmt.Println("==============================")
+	fmt.Println(agentUrl) // JSON 문자열 출력
+
 	if err != nil {
 		return err
 	}
@@ -159,6 +166,17 @@ func InitConnectAgent() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API 요청 실패: %s", resp.Status)
+	}
+
+	return nil
+}
+
+func HealthChecker() error {
+
+	url, _ := env_service.MakeAgentURL(env_service.CheckAgentStatus)
+	resp, err := http.Get(url)
+	if err != nil {
 		return fmt.Errorf("API 요청 실패: %s", resp.Status)
 	}
 

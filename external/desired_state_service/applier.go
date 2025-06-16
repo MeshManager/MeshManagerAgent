@@ -3,6 +3,7 @@ package desired_state_service
 import (
 	"context"
 	"fmt"
+	"github.com/MeshManager/MeshManagerAgent/external/env_service"
 	"io"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +14,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"net/http"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 	"time"
@@ -84,7 +84,7 @@ func (m *MetricServiceDynamic) ApplyYAMLFromURL(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 
 	// 1. 환경변수 조회 (외부 스코프 변수 선언)
-	url := os.Getenv("DESIRED_STATE_URL")
+	url, _ := env_service.MakeAgentURL(env_service.YAML)
 
 	// 2. 환경변수 없을 경우 기본값 설정
 	if url == "" {

@@ -223,6 +223,12 @@ func main() {
 					setupLog.Error(err, "Failed to apply YAML")
 				}
 				setupLog.Info("Success to apply YAML")
+
+				if err := metrics_service.HealthChecker(); err != nil {
+					setupLog.Error(err, "Failed to check health")
+				}
+				setupLog.Info("Success to send health")
+
 			case <-ctx.Done():
 				setupLog.Info("Stopping metric collector")
 				return

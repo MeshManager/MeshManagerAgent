@@ -193,6 +193,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	    -e "s|UUID_PLACEHOLDER|${UUID}|g" \
 	    -e "s|AGENT_URL_PLACEHOLDER|${AGENT_URL}|g" \
 	    -e "s|DESIRED_STATE_URL_PLACEHOLDER|${DESIRED_STATE_URL}|g" | \
+	    -e "s|CLUSTER_MANAGEMENT_URL_PLACEHOLDER|${CLUSTER_MANAGEMENT_URL}|g" | \
 	$(KUBECTL) apply -f -
 
 .PHONY: undeploy

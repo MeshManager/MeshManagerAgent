@@ -19,6 +19,19 @@ func GetAgentUrl() (string, error) {
 	return agentUrl, nil
 }
 
+func GetClusterManagementUrl() (string, error) {
+	agentUrl := os.Getenv("CLUSTER_MANAGEMENT_URL")
+	if agentUrl == "" {
+		return "", fmt.Errorf("CLUSTER_MANAGEMENT_URL 환경변수가 설정되지 않았거나 비어 있습니다")
+	}
+
+	if !strings.HasPrefix(agentUrl, "http") {
+		return "", fmt.Errorf("CLUSTER_MANAGEMENT_URL이 http 또는 https가 아닙니다")
+	}
+
+	return agentUrl, nil
+}
+
 func GetDesiredStateUrl() (string, error) {
 	desiredStateUrl := os.Getenv("DESIRED_STATE_URL")
 	if desiredStateUrl == "" {
