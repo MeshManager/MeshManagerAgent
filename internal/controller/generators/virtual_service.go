@@ -241,3 +241,64 @@ func getDefaultSubset(svc meshmanagerv1.ServiceConfig) string {
 	}
 	return svc.CommitHashes[0] // fallback
 }
+
+func GenerateIngressVirtualService(svc meshmanagerv1.ServiceConfig) *istiov1beta1.VirtualService {
+	vs := &istiov1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      svc.Name + "-ingress",
+			Namespace: svc.Namespace,
+		},
+		Spec: apiv1beta1.VirtualService{
+			Hosts:    []string{"*"},
+			Gateways: []string{"istio-gateway"},
+			Http:     generateIngressRoutes(svc),
+		},
+	}
+	return vs
+}
+
+func generateIngressRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPRoute {
+	uriPrefix := fmt.Sprintf("/%s", svc.Name) // 서비스명 기반 경로 생성
+
+	var routes []*apiv1beta1.HTTPRoute
+
+	for _, hash := range svc.CommitHashes {
+		route := &apiv1beta1.HTTPRoute{
+			Match: []*apiv1beta1.HTTPMatchRequest{{
+				Uri: &apiv1beta1.StringMatch{
+					MatchType: &apiv1beta1.StringMatch_Prefix{Prefix: uriPrefix},
+				},
+				Headers: map[string]*apiv1beta1.StringMatch{
+					"x-canary-version": {
+						MatchType: &apiv1beta1.StringMatch_Exact{Exact: hash},
+					},
+				},
+			}},
+			Rewrite: &apiv1beta1.HTTPRewrite{Uri: "/"},
+			Route: []*apiv1beta1.HTTPRouteDestination{{
+				Destination: &apiv1beta1.Destination{
+					Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+					Subset: hash,
+				},
+			}},
+		}
+		routes = append(routes, route)
+	}
+
+	defaultRoute := &apiv1beta1.HTTPRoute{
+		Match: []*apiv1beta1.HTTPMatchRequest{{
+			Uri: &apiv1beta1.StringMatch{
+				MatchType: &apiv1beta1.StringMatch_Prefix{Prefix: uriPrefix},
+			},
+		}},
+		Route: []*apiv1beta1.HTTPRouteDestination{{
+			Destination: &apiv1beta1.Destination{
+				Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+				Subset: getDefaultSubset(svc),
+			},
+		}},
+	}
+	routes = append(routes, defaultRoute)
+
+	return routes
+}

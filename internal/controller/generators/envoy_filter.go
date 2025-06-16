@@ -95,9 +95,9 @@ func buildCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
 	return fmt.Sprintf(`
 function envoy_on_request(request_handle)
 	local headers = request_handle:headers()
-	local host = headers:get(":authority")
-	
-	if host == "%s.%s.svc.cluster.local" then
+  	local path = headers:get(":path")
+  
+  	if string.find(path, "^/%s") then
 		local jwt = headers:get("jwt")
 		if jwt then
 			local hash = 0
@@ -108,7 +108,7 @@ function envoy_on_request(request_handle)
 			headers:add("x-canary-version", hash < %d and "%s" or "%s")
 		end
 	end
-end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
 }
 
 func buildStickyCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
@@ -119,9 +119,9 @@ func buildStickyCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
 	return fmt.Sprintf(`
 function envoy_on_request(request_handle)
 	local headers = request_handle:headers()
-	local host = headers:get(":authority")
-	
-	if host == "%s.%s.svc.cluster.local" then
+  	local path = headers:get(":path")
+  
+  	if string.find(path, "^/%s") then
 		local jwt = headers:get("jwt")
 		if jwt then
 			local hash = 0
@@ -133,7 +133,7 @@ function envoy_on_request(request_handle)
 			headers:add("x-session-id", tostring(math.floor(hash)))
 		end
 	end
-end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
 }
 
 func buildCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
@@ -154,9 +154,9 @@ func buildCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
 	return fmt.Sprintf(`
 function envoy_on_request(request_handle)
 	local headers = request_handle:headers()
-	local host = headers:get(":authority")
-	
-	if host == "%s.%s.svc.cluster.local" then
+  	local path = headers:get(":path")
+  
+  	if string.find(path, "^/%s") then
 		local jwt = headers:get("jwt")
 		if jwt then
 			local hash = 0
@@ -168,7 +168,7 @@ function envoy_on_request(request_handle)
 %s
 		end
 	end
-end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
+end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
 }
 
 func buildStickyCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
@@ -189,9 +189,9 @@ func buildStickyCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string
 	return fmt.Sprintf(`
 function envoy_on_request(request_handle)
 	local headers = request_handle:headers()
-	local host = headers:get(":authority")
-	
-	if host == "%s.%s.svc.cluster.local" then
+  	local path = headers:get(":path")
+  
+  	if string.find(path, "^/%s") then
 		local jwt = headers:get("jwt")
 		if jwt then
 			local hash = 0
@@ -204,5 +204,5 @@ function envoy_on_request(request_handle)
 %s
 		end
 	end
-end`, svc.Name, svc.Namespace, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
+end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
 }
