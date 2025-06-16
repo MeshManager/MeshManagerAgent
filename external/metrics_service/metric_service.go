@@ -109,6 +109,13 @@ func SendMetric(data map[string]interface{}) error {
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
+
+	//TODO test 후 제거
+	fmt.Println("====== 전송된 JSON 데이터 ======")
+	fmt.Println(string(jsonData)) // JSON 문자열 출력
+	fmt.Println("==============================")
+	fmt.Println(agentUrl) // JSON 문자열 출력
+
 	if err != nil {
 		return err
 	}
