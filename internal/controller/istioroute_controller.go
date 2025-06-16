@@ -62,6 +62,15 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	_ = istioRoute.DeepCopy()
 
+	gateway := generator.GenerateIstioGateway("istio-gateway", "default")
+	if err := ctrl.SetControllerReference(&istioRoute, gateway, r.Scheme); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.CreateOrUpdate(ctx, gateway); err != nil {
+		logger.Error(err, "failed to manage Gateway")
+		return ctrl.Result{}, err
+	}
+
 	for _, svcConfig := range istioRoute.Spec.Services {
 		vs := generator.GenerateVirtualService(svcConfig)
 		if err := ctrl.SetControllerReference(&istioRoute, vs, r.Scheme); err != nil {
@@ -82,7 +91,7 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			logger.Error(err, "failed to manage VirtualService")
 			return ctrl.Result{}, err
 		}
-		
+
 		dr := generator.GenerateDestinationRule(svcConfig)
 		if err := ctrl.SetControllerReference(&istioRoute, dr, r.Scheme); err != nil {
 			return ctrl.Result{}, err
