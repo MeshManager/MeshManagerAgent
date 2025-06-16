@@ -73,6 +73,16 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 
+		ingressVS := generator.GenerateIngressVirtualService(svcConfig)
+		if err := ctrl.SetControllerReference(&istioRoute, ingressVS, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if err := r.CreateOrUpdate(ctx, ingressVS); err != nil {
+			logger.Error(err, "failed to manage VirtualService")
+			return ctrl.Result{}, err
+		}
+		
 		dr := generator.GenerateDestinationRule(svcConfig)
 		if err := ctrl.SetControllerReference(&istioRoute, dr, r.Scheme); err != nil {
 			return ctrl.Result{}, err
