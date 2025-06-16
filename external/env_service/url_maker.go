@@ -23,6 +23,8 @@ func MakeAgentURL(urlType URL) (string, error) {
 	switch urlType {
 	case YAML:
 		baseUrl, err = GetDesiredStateUrl()
+	case SaveClusterState:
+		baseUrl, err = GetClusterManagementUrl()
 	default:
 		baseUrl, err = GetAgentUrl()
 	}
@@ -35,7 +37,7 @@ func MakeAgentURL(urlType URL) (string, error) {
 	case RegisterAgent:
 		fullURL = fmt.Sprintf("%s/", baseUrl)
 	case SaveClusterState:
-		fullURL = fmt.Sprintf("%s/%s/cluster-state", baseUrl, agentName)
+		fullURL = fmt.Sprintf("%s/", baseUrl)
 	case CheckAgentStatus:
 		fullURL = fmt.Sprintf("%s/%s/status", baseUrl, agentName)
 	case YAML:
