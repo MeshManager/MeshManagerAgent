@@ -47,7 +47,7 @@ func MakeAgentURL(urlType URL) (string, error) {
 		return "", fmt.Errorf("지원하지 않는 URL 타입: %s", urlType)
 	}
 
-	log.Printf("생성된 fullURL: %s", fullURL)
+	log.Printf("생성된 fullURL: %s \n Type: %s\n", fullURL, urlType)
 
 	return fullURL, nil
 }
