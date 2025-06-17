@@ -162,7 +162,7 @@ func InitConnectAgent() error {
 		bytes.NewBuffer(jsonData),
 	)
 
-	log.Print(jsonData)
+	log.Printf("요청 데이터: %s", string(jsonData))
 
 	if err != nil {
 		return fmt.Errorf("POST 요청 실패: %v", err)
