@@ -179,9 +179,14 @@ func InitConnectAgent() error {
 func HealthChecker() error {
 
 	url, _ := env_service.MakeAgentURL(env_service.CheckAgentStatus)
-	resp, err := http.Get(url)
+	resp, err := http.Post(url, "application/json", nil)
 	if err != nil {
-		return fmt.Errorf("API 요청 실패: %s", resp.Status)
+		return fmt.Errorf("API 요청 실패: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API 응답 실패: %s", resp.Status)
 	}
 
 	return nil
