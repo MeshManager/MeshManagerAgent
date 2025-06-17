@@ -8,6 +8,7 @@ import (
 	"github.com/MeshManager/MeshManagerAgent/external/env_service"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"log"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -160,6 +161,9 @@ func InitConnectAgent() error {
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
+
+	log.Print(jsonData)
+
 	if err != nil {
 		return fmt.Errorf("POST 요청 실패: %v", err)
 	}
