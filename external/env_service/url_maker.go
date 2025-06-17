@@ -2,6 +2,7 @@ package env_service
 
 import (
 	"fmt"
+	"log"
 )
 
 type URL string
@@ -45,6 +46,8 @@ func MakeAgentURL(urlType URL) (string, error) {
 	default:
 		return "", fmt.Errorf("지원하지 않는 URL 타입: %s", urlType)
 	}
+
+	log.Printf("생성된 fullURL: %s", fullURL)
 
 	return fullURL, nil
 }
