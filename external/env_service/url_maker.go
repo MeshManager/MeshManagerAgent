@@ -16,6 +16,7 @@ const (
 
 func MakeAgentURL(urlType URL) (string, error) {
 	agentName, err := GetAgentName()
+	agentUUID, err := GetAgentUuid()
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +43,7 @@ func MakeAgentURL(urlType URL) (string, error) {
 	case CheckAgentStatus:
 		fullURL = fmt.Sprintf("%s/%s/cluster-state", baseUrl, agentName)
 	case YAML:
-		fullURL = fmt.Sprintf("%s/%s", baseUrl, agentName)
+		fullURL = fmt.Sprintf("%s/%s", baseUrl, agentUUID)
 	default:
 		return "", fmt.Errorf("지원하지 않는 URL 타입: %s", urlType)
 	}
