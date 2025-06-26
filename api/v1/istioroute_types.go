@@ -39,7 +39,7 @@ type ServiceConfig struct {
 
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
-	Ratio int `json:"ratio,omitempty"`
+	Ratio *int `json:"ratio,omitempty"`
 
 	Dependencies []Dependency `json:"dependencies,omitempty"`
 
