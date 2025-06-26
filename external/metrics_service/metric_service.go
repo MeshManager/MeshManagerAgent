@@ -8,7 +8,6 @@ import (
 	"github.com/MeshManager/MeshManagerAgent/external/env_service"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"log"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -111,12 +110,6 @@ func SendMetric(data map[string]interface{}) error {
 		bytes.NewBuffer(jsonData),
 	)
 
-	//TODO test 후 제거
-	fmt.Println("====== 전송된 JSON 데이터 ======")
-	fmt.Println(string(jsonData)) // JSON 문자열 출력
-	fmt.Println("==============================")
-	fmt.Println(agentUrl) // JSON 문자열 출력
-
 	if err != nil {
 		return err
 	}
@@ -161,8 +154,6 @@ func InitConnectAgent() error {
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-
-	log.Printf("요청 데이터: %s", string(jsonData))
 
 	if err != nil {
 		return fmt.Errorf("POST 요청 실패: %v", err)
