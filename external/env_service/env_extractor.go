@@ -60,3 +60,11 @@ func GetAgentName() (string, error) {
 	}
 	return agentName, nil
 }
+
+func GetSlackWebHookUrl() (string, error) {
+	slackWebHookUrl := os.Getenv("SLACK_WEB_HOOK_URL")
+	if slackWebHookUrl == "" {
+		return "", fmt.Errorf("SLACK_WEB_HOOK_URL 환경변수가 설정되지 않았거나 비어 있습니다")
+	}
+	return slackWebHookUrl, nil
+}
