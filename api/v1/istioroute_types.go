@@ -45,6 +45,7 @@ type ServiceConfig struct {
 
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=3600
+	// +kubebuilder:validation:nullable
 	SessionDuration int `json:"sessionDuration,omitempty"`
 
 	OutlierDetection *OutlierDetection `json:"outlierDetection,omitempty"`
