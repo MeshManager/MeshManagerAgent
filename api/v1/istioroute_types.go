@@ -33,7 +33,7 @@ type ServiceConfig struct {
 	Namespace string      `json:"namespace"`
 	Type      ServiceType `json:"type"` // Canary, StickyCanary
 
-	// +kubebuilder:validation:MinItems=2
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=2
 	CommitHashes []string `json:"commitHashes,omitempty"`
 
