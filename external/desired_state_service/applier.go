@@ -109,7 +109,7 @@ func (m *MetricServiceDynamic) ApplyYAMLFromURL(ctx context.Context) error {
 		return fmt.Errorf("YAML 데이터 읽기 실패: %v", err)
 	}
 
-	logger.Info(string(data))
+	// logger.Info(string(data))
 
 	// 5. 적용
 	return m.ApplyYAML(ctx, string(data))
