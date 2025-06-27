@@ -61,10 +61,18 @@ func GetAgentName() (string, error) {
 	return agentName, nil
 }
 
-func GetSlackWebHookUrl() (string, error) {
+func GetSlackWebHookUrl() (string, string, error) {
 	slackWebHookUrl := os.Getenv("SLACK_WEB_HOOK_URL")
 	if slackWebHookUrl == "" {
-		return "", fmt.Errorf("SLACK_WEB_HOOK_URL 환경변수가 설정되지 않았거나 비어 있습니다")
+		return "", "", fmt.Errorf("SLACK_WEB_HOOK_URL 환경변수가 설정되지 않았거나 비어 있습니다")
 	}
-	return slackWebHookUrl, nil
+
+	parts := strings.Split(slackWebHookUrl, ":") // 예: "apikey,channelid"
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("SLACK_WEB_HOOK_URL 형식이 잘못되었습니다")
+	}
+
+	channelId := parts[0]
+	apiKey := parts[1]
+	return channelId, apiKey, nil
 }
