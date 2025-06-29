@@ -218,7 +218,7 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		} else {
 			// Success case - send success notification
 			if slackChannel != "nil" && slackAPIKEY != "nil" {
-				logger.Info(slackChannel, slackAPIKEY)
+				logger.Info("Slack 정보 출력", "slackChannel", slackChannel, "slackAPIKEY", slackAPIKEY)
 
 				msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
 					obj.GetKind(), obj.GetNamespace(), obj.GetName())
