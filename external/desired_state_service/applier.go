@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/dynamic"
@@ -117,19 +118,67 @@ func (m *MetricServiceDynamic) ApplyYAMLFromURL(ctx context.Context) error {
 
 // ApplyYAML 추가: YAML 문자열 파싱 및 리소스 적용
 func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string) error {
+	// 1. 받은 istioroute 리소스 이름/네임스페이스 수집
+	istioRoutes := make(map[string]map[string]struct{}) // ns -> name set
+
 	docs := strings.Split(yamlContent, "---")
+	var objs []*unstructured.Unstructured
+
 	for _, doc := range docs {
 		if strings.TrimSpace(doc) == "" {
 			continue
 		}
-
 		obj := &unstructured.Unstructured{}
 		decoder := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 		_, _, err := decoder.Decode([]byte(doc), nil, obj)
 		if err != nil {
 			return fmt.Errorf("YAML 파싱 실패: %v", err)
 		}
+		objs = append(objs, obj)
 
+		if strings.ToLower(obj.GetKind()) == "istioroute" {
+			ns := obj.GetNamespace()
+			name := obj.GetName()
+			if istioRoutes[ns] == nil {
+				istioRoutes[ns] = make(map[string]struct{})
+			}
+			istioRoutes[ns][name] = struct{}{}
+		}
+	}
+
+	// 2. 클러스터에서 현재 istioroute 목록 조회 및 삭제 대상 선별
+	// GVR 얻기
+	gvk := schema.GroupVersionKind{
+		Group:   "mesh-manager.meshmanager.com", // 실제 Group/Version/Kind 확인 필요
+		Version: "v1",
+		Kind:    "IstioRoute",
+	}
+	mapping, err := m.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return fmt.Errorf("istioroute 매핑 실패: %v", err)
+	}
+
+	// 네임스페이스별로
+	for ns, names := range istioRoutes {
+		dr := m.dynamicClient.Resource(mapping.Resource).Namespace(ns)
+		list, err := dr.List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("istioroute 목록 조회 실패: %v", err)
+		}
+		for _, item := range list.Items {
+			name := item.GetName()
+			if _, found := names[name]; !found {
+				// 받은 YAML에 없는 istioroute는 삭제
+				err := dr.Delete(ctx, name, metav1.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("istioroute 삭제 실패: %v", err)
+				}
+			}
+		}
+	}
+
+	// 3. 나머지 리소스 Apply
+	for _, obj := range objs {
 		if err := m.Apply(ctx, obj); err != nil {
 			return fmt.Errorf("리소스 적용 실패: %v", err)
 		}
