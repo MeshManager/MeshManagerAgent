@@ -155,6 +155,14 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		slackAPIKEY = "nil"
 	}
 
+	if len(objs) == 0 {
+		// 모든 IstioRoute 삭제
+		if err := m.deleteAllIstioRoutes(ctx); err != nil {
+			return fmt.Errorf("모든 IstioRoute 삭제 실패: %v", err)
+		}
+		return nil
+	}
+
 	// 2. 클러스터에서 현재 istioroute 목록 조회 및 삭제 대상 선별
 	// GVR 얻기
 	gvk := schema.GroupVersionKind{
@@ -217,6 +225,58 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 					return nil
 				}
 			}
+		}
+	}
+	return nil
+}
+
+func (m *MetricServiceDynamic) deleteAllIstioRoutes(ctx context.Context) error {
+	logger := log.FromContext(ctx)
+
+	// 1. IstioRoute GVR(GroupVersionResource) 조회
+	gvk := schema.GroupVersionKind{
+		Group:   "mesh-manager.meshmanager.com",
+		Version: "v1",
+		Kind:    "IstioRoute",
+	}
+	mapping, err := m.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return fmt.Errorf("istioroute 매핑 실패: %v", err)
+	}
+
+	// 2. Slack 설정 확인
+	slackChannel, slackAPIKEY, slackErr := env_service.GetSlackWebHookUrl()
+	if slackErr != nil {
+		logger.Info("slack 설정 안됨", slackErr)
+		slackChannel = "nil"
+		slackAPIKEY = "nil"
+	}
+
+	// 3. 모든 네임스페이스에서 IstioRoute 리소스 조회
+	dr := m.dynamicClient.Resource(mapping.Resource).Namespace(metav1.NamespaceAll)
+	list, err := dr.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("istioroute 목록 조회 실패: %v", err)
+	}
+
+	// 4. 모든 IstioRoute 삭제
+	for _, item := range list.Items {
+		name := item.GetName()
+		namespace := item.GetNamespace()
+
+		// Slack 알림 전송
+		if slackChannel != "nil" && slackAPIKEY != "nil" {
+			msg := fmt.Sprintf(":wastebasket: IstioRoute 삭제\n> *Namespace*: `%s`\n> *Name*: `%s`",
+				namespace, name)
+			if err := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); err != nil {
+				logger.Info("Slack 알림 전송 실패: %v", err)
+			}
+		}
+
+		// 리소스 삭제
+		drNamespace := m.dynamicClient.Resource(mapping.Resource).Namespace(namespace)
+		if err := drNamespace.Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+			return fmt.Errorf("istioroute %s/%s 삭제 실패: %v", namespace, name, err)
 		}
 	}
 	return nil
