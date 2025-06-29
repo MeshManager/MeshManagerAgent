@@ -274,7 +274,7 @@ func generateIngressRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPRo
 					},
 				},
 			}},
-			Rewrite: &apiv1beta1.HTTPRewrite{Uri: "/"},
+			Rewrite: &apiv1beta1.HTTPRewrite{Uri: "/api"},
 			Route: []*apiv1beta1.HTTPRouteDestination{{
 				Destination: &apiv1beta1.Destination{
 					Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
@@ -291,7 +291,7 @@ func generateIngressRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPRo
 				MatchType: &apiv1beta1.StringMatch_Prefix{Prefix: uriPrefix},
 			},
 		}},
-		Rewrite: &apiv1beta1.HTTPRewrite{Uri: "/"},
+		Rewrite: &apiv1beta1.HTTPRewrite{Uri: "/api"},
 		Route: []*apiv1beta1.HTTPRouteDestination{{
 			Destination: &apiv1beta1.Destination{
 				Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
