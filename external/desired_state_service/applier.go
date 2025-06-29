@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/MeshManager/MeshManagerAgent/external/env_service"
+	"github.com/MeshManager/MeshManagerAgent/external/slack_metric_exporter"
 	"io"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -146,6 +147,14 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		}
 	}
 
+	slackChannel, slackAPIKEY, err := env_service.GetSlackWebHookUrl()
+	logger := log.FromContext(ctx)
+	if err != nil {
+		logger.Info("slack 설정 안됨", err)
+		slackChannel = "nil"
+		slackAPIKEY = "nil"
+	}
+
 	// 2. 클러스터에서 현재 istioroute 목록 조회 및 삭제 대상 선별
 	// GVR 얻기
 	gvk := schema.GroupVersionKind{
@@ -168,6 +177,15 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		for _, item := range list.Items {
 			name := item.GetName()
 			if _, found := names[name]; !found {
+
+				// Slack에 삭제할 리소스 전송
+				if slackChannel != "nil" && slackAPIKEY != "nil" {
+					msg := fmt.Sprintf(":wastebasket: IstioRoute 삭제\n> *Namespace*: `%s`\n> *Name*: `%s`", ns, name)
+					if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+						logger.Info("Slack 알림 전송 실패: %v", slackErr)
+					}
+				}
+
 				// 받은 YAML에 없는 istioroute는 삭제
 				err := dr.Delete(ctx, name, metav1.DeleteOptions{})
 				if err != nil {
@@ -180,7 +198,21 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 	// 3. 나머지 리소스 Apply
 	for _, obj := range objs {
 		if err := m.Apply(ctx, obj); err != nil {
+			// Send Slack notification on apply failure
+			msg := fmt.Sprintf(":exclamation: 리소스 적용 실패\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`\n> *Error*: `%v`",
+				obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+			if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+				return fmt.Errorf("slack 알림 전송 실패: %v", slackErr)
+			}
 			return fmt.Errorf("리소스 적용 실패: %v", err)
+		} else {
+			// Success case - send success notification
+			msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
+				obj.GetKind(), obj.GetNamespace(), obj.GetName())
+			if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+				logger.Info("Slack 알림 전송 실패: %v", slackErr)
+				return nil
+			}
 		}
 	}
 	return nil
