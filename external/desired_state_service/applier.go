@@ -271,7 +271,7 @@ func (m *MetricServiceDynamic) deleteAllIstioRoutes(ctx context.Context) error {
 			msg := fmt.Sprintf(":wastebasket: IstioRoute 삭제\n> *Namespace*: `%s`\n> *Name*: `%s`",
 				namespace, name)
 			if err := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); err != nil {
-				logger.Info("Slack 알림 전송 실패: %v", err)
+				logger.Info("Slack 알림 전송 실패", "error", err)
 			}
 		}
 

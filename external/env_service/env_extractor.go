@@ -74,5 +74,5 @@ func GetSlackWebHookUrl() (string, string, error) {
 
 	apiKey := strings.TrimSpace(parts[0])
 	channelId := strings.TrimSpace(parts[1])
-	return channelId, apiKey, nil
+	return apiKey, channelId, nil
 }
