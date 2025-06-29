@@ -245,9 +245,9 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 				return fmt.Errorf("리소스 적용 실패: %v", err)
 			} else {
 				// 성공 알림
+				// ApplyYAML 함수 내 적용 성공 알림 부분
 				if slackChannel != "nil" && slackAPIKEY != "nil" {
-					msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
-						obj.GetKind(), obj.GetNamespace(), obj.GetName())
+					msg := generateSuccessMessage(obj)
 					if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
 						logger.Info("Slack 알림 전송 실패", "error", slackErr)
 					}
@@ -313,4 +313,88 @@ func (m *MetricServiceDynamic) deleteAllIstioRoutes(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// generateSuccessMessage: 리소스별 상세 성공 메시지 생성
+func generateSuccessMessage(obj *unstructured.Unstructured) string {
+	// IstioRoute 리소스인 경우 상세 정보 생성
+	if strings.ToLower(obj.GetKind()) == "istioroute" {
+		// IstioRoute 스펙 파싱
+		spec, ok := obj.Object["spec"].(map[string]interface{})
+		if !ok {
+			spec = make(map[string]interface{})
+		}
+
+		// 서비스 정보 포매팅
+		var servicesBuilder strings.Builder
+		if servicesList, ok := spec["services"].([]interface{}); ok {
+			for i, svc := range servicesList {
+				if service, ok := svc.(map[string]interface{}); ok {
+					if i > 0 {
+						servicesBuilder.WriteString("\n")
+					}
+
+					// 기본 서비스 정보
+					servicesBuilder.WriteString(fmt.Sprintf(
+						">   - *Service*: `%s/%s`\n>     - *Type*: `%s`",
+						service["namespace"], service["name"], service["type"],
+					))
+
+					// 커밋 해시 정보
+					if commits, ok := service["commitHashes"].([]interface{}); ok && len(commits) > 0 {
+						commitStrs := make([]string, len(commits))
+						for i, c := range commits {
+							commitStrs[i] = fmt.Sprintf("`%s`", c)
+						}
+						servicesBuilder.WriteString(fmt.Sprintf(
+							"\n>     - *Commits*: %s",
+							strings.Join(commitStrs, ", "),
+						))
+					}
+
+					// Ratio 정보
+					if ratio, ok := service["ratio"].(float64); ok {
+						servicesBuilder.WriteString(fmt.Sprintf("\n>     - *Ratio*: `%.0f%%`", ratio))
+					}
+
+					// 세션 지속 시간
+					if duration, ok := service["sessionDuration"].(float64); ok && duration > 0 {
+						servicesBuilder.WriteString(fmt.Sprintf("\n>     - *Session*: `%.0fs`", duration))
+					}
+
+					// Darkness Releases 정보
+					if drList, ok := service["darknessReleases"].([]interface{}); ok && len(drList) > 0 {
+						drInfo := make([]string, len(drList))
+						for i, dr := range drList {
+							if drMap, ok := dr.(map[string]interface{}); ok {
+								drInfo[i] = fmt.Sprintf(
+									"`%s` (IPs: %v)",
+									drMap["commitHash"],
+									drMap["ips"],
+								)
+							}
+						}
+						servicesBuilder.WriteString(fmt.Sprintf("\n>     - *Darkness*: %s", strings.Join(drInfo, ", ")))
+					}
+				}
+			}
+		}
+
+		return fmt.Sprintf(
+			":white_check_mark: *IstioRoute 적용 성공*\n"+
+				"> *Namespace*: `%s`\n"+
+				"> *Name*: `%s`\n"+
+				"> *Services*:\n%s",
+			obj.GetNamespace(), obj.GetName(), servicesBuilder.String(),
+		)
+	}
+
+	// 기본 리소스 포맷
+	return fmt.Sprintf(
+		":white_check_mark: 리소스 적용 성공\n"+
+			"> *Type*: `%s`\n"+
+			"> *Namespace*: `%s`\n"+
+			"> *Name*: `%s`",
+		obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+	)
 }
