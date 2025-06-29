@@ -201,17 +201,21 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 			// Send Slack notification on apply failure
 			msg := fmt.Sprintf(":exclamation: 리소스 적용 실패\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`\n> *Error*: `%v`",
 				obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
-			if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
-				return fmt.Errorf("slack 알림 전송 실패: %v", slackErr)
+			if slackChannel != "nil" && slackAPIKEY != "nil" {
+				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+					return fmt.Errorf("slack 알림 전송 실패: %v", slackErr)
+				}
 			}
 			return fmt.Errorf("리소스 적용 실패: %v", err)
 		} else {
 			// Success case - send success notification
-			msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
-				obj.GetKind(), obj.GetNamespace(), obj.GetName())
-			if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
-				logger.Info("Slack 알림 전송 실패: %v", slackErr)
-				return nil
+			if slackChannel != "nil" && slackAPIKEY != "nil" {
+				msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
+					obj.GetKind(), obj.GetNamespace(), obj.GetName())
+				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+					logger.Info("Slack 알림 전송 실패: %v", slackErr)
+					return nil
+				}
 			}
 		}
 	}
