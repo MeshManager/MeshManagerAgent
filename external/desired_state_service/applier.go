@@ -218,10 +218,12 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		} else {
 			// Success case - send success notification
 			if slackChannel != "nil" && slackAPIKEY != "nil" {
+				logger.Info(slackChannel, slackAPIKEY)
+
 				msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
 					obj.GetKind(), obj.GetNamespace(), obj.GetName())
 				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
-					logger.Info("Slack 알림 전송 실패: %v", slackErr)
+					logger.Info("Slack 알림 전송 실패", "error", slackErr)
 					return nil
 				}
 			}
