@@ -98,15 +98,8 @@ function envoy_on_request(request_handle)
   	local path = headers:get(":path")
   
   	if string.find(path, "^/%s") then
-		local jwt = headers:get("jwt")
-		if jwt then
-			local hash = 0
-			for i = 1, #jwt do
-				hash = (hash * 31 + jwt:byte(i)) %% 100
-			end
-			
-			headers:add("x-canary-version", hash < %d and "%s" or "%s")
-		end
+		local rand = math.random(0, 99)
+		headers:add("x-canary-version", rand < %d and "%s" or "%s")
 	end
 end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
 }
