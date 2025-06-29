@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/MeshManager/MeshManagerAgent/external/env_service"
+	"github.com/MeshManager/MeshManagerAgent/external/slack_metric_exporter"
 	"io"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/dynamic"
@@ -117,21 +119,166 @@ func (m *MetricServiceDynamic) ApplyYAMLFromURL(ctx context.Context) error {
 
 // ApplyYAML 추가: YAML 문자열 파싱 및 리소스 적용
 func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string) error {
+	// 1. 받은 istioroute 리소스 이름/네임스페이스 수집
+	istioRoutes := make(map[string]map[string]struct{}) // ns -> name set
+
 	docs := strings.Split(yamlContent, "---")
+	var objs []*unstructured.Unstructured
+
 	for _, doc := range docs {
 		if strings.TrimSpace(doc) == "" {
 			continue
 		}
-
 		obj := &unstructured.Unstructured{}
 		decoder := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 		_, _, err := decoder.Decode([]byte(doc), nil, obj)
 		if err != nil {
 			return fmt.Errorf("YAML 파싱 실패: %v", err)
 		}
+		objs = append(objs, obj)
 
+		if strings.ToLower(obj.GetKind()) == "istioroute" {
+			ns := obj.GetNamespace()
+			name := obj.GetName()
+			if istioRoutes[ns] == nil {
+				istioRoutes[ns] = make(map[string]struct{})
+			}
+			istioRoutes[ns][name] = struct{}{}
+		}
+	}
+
+	slackChannel, slackAPIKEY, err := env_service.GetSlackWebHookUrl()
+	logger := log.FromContext(ctx)
+	if err != nil {
+		logger.Info("slack 설정 안됨", err)
+		slackChannel = "nil"
+		slackAPIKEY = "nil"
+	}
+
+	if len(objs) == 0 {
+		// 모든 IstioRoute 삭제
+		if err := m.deleteAllIstioRoutes(ctx); err != nil {
+			return fmt.Errorf("모든 IstioRoute 삭제 실패: %v", err)
+		}
+		return nil
+	}
+
+	// 2. 클러스터에서 현재 istioroute 목록 조회 및 삭제 대상 선별
+	// GVR 얻기
+	gvk := schema.GroupVersionKind{
+		Group:   "mesh-manager.meshmanager.com", // 실제 Group/Version/Kind 확인 필요
+		Version: "v1",
+		Kind:    "IstioRoute",
+	}
+	mapping, err := m.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return fmt.Errorf("istioroute 매핑 실패: %v", err)
+	}
+
+	// 네임스페이스별로
+	for ns, names := range istioRoutes {
+		dr := m.dynamicClient.Resource(mapping.Resource).Namespace(ns)
+		list, err := dr.List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("istioroute 목록 조회 실패: %v", err)
+		}
+		for _, item := range list.Items {
+			name := item.GetName()
+			if _, found := names[name]; !found {
+
+				// Slack에 삭제할 리소스 전송
+				if slackChannel != "nil" && slackAPIKEY != "nil" {
+					msg := fmt.Sprintf(":wastebasket: IstioRoute 삭제\n> *Namespace*: `%s`\n> *Name*: `%s`", ns, name)
+					if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+						logger.Info("Slack 알림 전송 실패: %v", slackErr)
+					}
+				}
+
+				// 받은 YAML에 없는 istioroute는 삭제
+				err := dr.Delete(ctx, name, metav1.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("istioroute 삭제 실패: %v", err)
+				}
+			}
+		}
+	}
+
+	// 3. 나머지 리소스 Apply
+	for _, obj := range objs {
 		if err := m.Apply(ctx, obj); err != nil {
+			// Send Slack notification on apply failure
+			msg := fmt.Sprintf(":exclamation: 리소스 적용 실패\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`\n> *Error*: `%v`",
+				obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+			if slackChannel != "nil" && slackAPIKEY != "nil" {
+				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+					return fmt.Errorf("slack 알림 전송 실패: %v", slackErr)
+				}
+			}
 			return fmt.Errorf("리소스 적용 실패: %v", err)
+		} else {
+			// Success case - send success notification
+			if slackChannel != "nil" && slackAPIKEY != "nil" {
+				logger.Info("Slack 정보 출력", "slackChannel", slackChannel, "slackAPIKEY", slackAPIKEY)
+
+				msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
+					obj.GetKind(), obj.GetNamespace(), obj.GetName())
+				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+					logger.Info("Slack 알림 전송 실패", "error", slackErr)
+					return nil
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (m *MetricServiceDynamic) deleteAllIstioRoutes(ctx context.Context) error {
+	logger := log.FromContext(ctx)
+
+	// 1. IstioRoute GVR(GroupVersionResource) 조회
+	gvk := schema.GroupVersionKind{
+		Group:   "mesh-manager.meshmanager.com",
+		Version: "v1",
+		Kind:    "IstioRoute",
+	}
+	mapping, err := m.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return fmt.Errorf("istioroute 매핑 실패: %v", err)
+	}
+
+	// 2. Slack 설정 확인
+	slackChannel, slackAPIKEY, slackErr := env_service.GetSlackWebHookUrl()
+	if slackErr != nil {
+		logger.Info("slack 설정 안됨", slackErr)
+		slackChannel = "nil"
+		slackAPIKEY = "nil"
+	}
+
+	// 3. 모든 네임스페이스에서 IstioRoute 리소스 조회
+	dr := m.dynamicClient.Resource(mapping.Resource).Namespace(metav1.NamespaceAll)
+	list, err := dr.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("istioroute 목록 조회 실패: %v", err)
+	}
+
+	// 4. 모든 IstioRoute 삭제
+	for _, item := range list.Items {
+		name := item.GetName()
+		namespace := item.GetNamespace()
+
+		// Slack 알림 전송
+		if slackChannel != "nil" && slackAPIKEY != "nil" {
+			msg := fmt.Sprintf(":wastebasket: IstioRoute 삭제\n> *Namespace*: `%s`\n> *Name*: `%s`",
+				namespace, name)
+			if err := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); err != nil {
+				logger.Info("Slack 알림 전송 실패", "error", err)
+			}
+		}
+
+		// 리소스 삭제
+		drNamespace := m.dynamicClient.Resource(mapping.Resource).Namespace(namespace)
+		if err := drNamespace.Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+			return fmt.Errorf("istioroute %s/%s 삭제 실패: %v", namespace, name, err)
 		}
 	}
 	return nil
