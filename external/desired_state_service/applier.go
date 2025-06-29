@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"net/http"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 	"time"
@@ -185,16 +186,12 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		for _, item := range list.Items {
 			name := item.GetName()
 			if _, found := names[name]; !found {
-
-				// Slack에 삭제할 리소스 전송
 				if slackChannel != "nil" && slackAPIKEY != "nil" {
 					msg := fmt.Sprintf(":wastebasket: IstioRoute 삭제\n> *Namespace*: `%s`\n> *Name*: `%s`", ns, name)
 					if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
 						logger.Info("Slack 알림 전송 실패: %v", slackErr)
 					}
 				}
-
-				// 받은 YAML에 없는 istioroute는 삭제
 				err := dr.Delete(ctx, name, metav1.DeleteOptions{})
 				if err != nil {
 					return fmt.Errorf("istioroute 삭제 실패: %v", err)
@@ -203,30 +200,64 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 		}
 	}
 
-	// 3. 나머지 리소스 Apply
+	// 3. 나머지 리소스 Apply (변경사항 있을 때만)
 	for _, obj := range objs {
-		if err := m.Apply(ctx, obj); err != nil {
-			// Send Slack notification on apply failure
-			msg := fmt.Sprintf(":exclamation: 리소스 적용 실패\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`\n> *Error*: `%v`",
-				obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
-			if slackChannel != "nil" && slackAPIKEY != "nil" {
-				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
-					return fmt.Errorf("slack 알림 전송 실패: %v", slackErr)
-				}
-			}
-			return fmt.Errorf("리소스 적용 실패: %v", err)
-		} else {
-			// Success case - send success notification
-			if slackChannel != "nil" && slackAPIKEY != "nil" {
-				logger.Info("Slack 정보 출력", "slackChannel", slackChannel, "slackAPIKEY", slackAPIKEY)
+		gvk := obj.GroupVersionKind()
+		mapping, err := m.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err != nil {
+			return fmt.Errorf("매핑 실패: %v", err)
+		}
+		dr := m.dynamicClient.Resource(mapping.Resource).Namespace(obj.GetNamespace())
+		existing, err := dr.Get(ctx, obj.GetName(), metav1.GetOptions{})
 
-				msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
-					obj.GetKind(), obj.GetNamespace(), obj.GetName())
-				if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
-					logger.Info("Slack 알림 전송 실패", "error", slackErr)
-					return nil
+		// 변경 필요 여부 체크
+		needsUpdate := true
+		if err == nil {
+			// 라벨 비교
+			labelsEqual := reflect.DeepEqual(existing.GetLabels(), obj.GetLabels())
+
+			// 어노테이션 비교
+			annotationsEqual := reflect.DeepEqual(existing.GetAnnotations(), obj.GetAnnotations())
+
+			// Spec 비교
+			existingSpec, _ := existing.Object["spec"].(map[string]interface{})
+			newSpec, _ := obj.Object["spec"].(map[string]interface{})
+			specEqual := reflect.DeepEqual(existingSpec, newSpec)
+
+			needsUpdate = !(labelsEqual && annotationsEqual && specEqual)
+		}
+
+		if needsUpdate {
+			if err := m.Apply(ctx, obj); err != nil {
+				// 에러 유형 체크 ("unconfigured" 오류는 알림 제외)
+				if strings.Contains(err.Error(), "unconfigured") {
+					continue
+				}
+
+				// 일반 오류 처리
+				msg := fmt.Sprintf(":exclamation: 리소스 적용 실패\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`\n> *Error*: `%v`",
+					obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+				if slackChannel != "nil" && slackAPIKEY != "nil" {
+					if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+						return fmt.Errorf("slack 알림 전송 실패: %v", slackErr)
+					}
+				}
+				return fmt.Errorf("리소스 적용 실패: %v", err)
+			} else {
+				// 성공 알림
+				if slackChannel != "nil" && slackAPIKEY != "nil" {
+					msg := fmt.Sprintf(":white_check_mark: 리소스 적용 성공\n> *Type*: `%s`\n> *Namespace*: `%s`\n> *Name*: `%s`",
+						obj.GetKind(), obj.GetNamespace(), obj.GetName())
+					if slackErr := slack_metric_exporter.SendSlackMessage(slackAPIKEY, slackChannel, msg); slackErr != nil {
+						logger.Info("Slack 알림 전송 실패", "error", slackErr)
+					}
 				}
 			}
+		} else {
+			logger.Info("리소스 변경사항 없음 - 스킵",
+				"Type", obj.GetKind(),
+				"Namespace", obj.GetNamespace(),
+				"Name", obj.GetName())
 		}
 	}
 	return nil
