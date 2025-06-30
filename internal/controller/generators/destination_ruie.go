@@ -21,7 +21,7 @@ func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Dest
 		},
 	}
 
-	if len(svc.CommitHashes) >= 2 { // +kubebuilder 검증 조건 충족
+	if len(svc.CommitHashes) >= 1 { // +kubebuilder 검증 조건 충족
 		for _, hash := range svc.CommitHashes {
 			dr.Spec.Subsets = append(dr.Spec.Subsets, &apiv1beta1.Subset{
 				Name:   hash,
