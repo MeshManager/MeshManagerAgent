@@ -21,18 +21,35 @@ func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Dest
 		},
 	}
 
-	if len(svc.CommitHashes) >= 1 { // +kubebuilder 검증 조건 충족
-		for _, hash := range svc.CommitHashes {
+	// 서브셋을 추적하기 위한 맵 (중복 방지)
+	subsetMap := make(map[string]struct{})
+
+	// 1. CommitHashes에서 서브셋 추가
+	for _, hash := range svc.CommitHashes {
+		if _, exists := subsetMap[hash]; !exists {
 			dr.Spec.Subsets = append(dr.Spec.Subsets, &apiv1beta1.Subset{
 				Name:   hash,
 				Labels: map[string]string{"version": hash},
 			})
+			subsetMap[hash] = struct{}{}
+		}
+	}
+
+	// 2. DarknessReleases에서 서브셋 추가
+	for _, drRelease := range svc.DarknessReleases {
+		hash := drRelease.CommitHash
+		if _, exists := subsetMap[hash]; !exists {
+			dr.Spec.Subsets = append(dr.Spec.Subsets, &apiv1beta1.Subset{
+				Name:   hash,
+				Labels: map[string]string{"version": hash},
+			})
+			subsetMap[hash] = struct{}{}
 		}
 	}
 
 	baseType := svc.Type
 
-	// Configure traffic policy for StickyCanary
+	// StickyCanaryType 트래픽 정책 설정
 	if baseType == meshmanagerv1.StickyCanaryType {
 		dr.Spec.TrafficPolicy = &apiv1beta1.TrafficPolicy{
 			LoadBalancer: &apiv1beta1.LoadBalancerSettings{
@@ -46,15 +63,13 @@ func GenerateDestinationRule(svc meshmanagerv1.ServiceConfig) *istiov1beta1.Dest
 			},
 		}
 
-		// Add outlier detection if configured
 		if svc.OutlierDetection != nil {
 			addOutlierDetection(dr, svc.OutlierDetection)
 		}
 	}
 
-	// For dependent services, add basic traffic policy if not already configured
-	isDependent := len(svc.Dependencies) > 0
-	if isDependent && dr.Spec.TrafficPolicy == nil {
+	// 종속 서비스 처리
+	if len(svc.Dependencies) > 0 && dr.Spec.TrafficPolicy == nil {
 		dr.Spec.TrafficPolicy = &apiv1beta1.TrafficPolicy{}
 	}
 
