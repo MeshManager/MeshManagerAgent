@@ -212,7 +212,7 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				setupLog.Info("Starting metric collection cycle")
+				// setupLog.Info("Starting metric collection cycle")
 				if err := metricSvc.CollectAndSend(ctx); err != nil {
 					setupLog.Error(err, "Metric collection failed")
 				} else {

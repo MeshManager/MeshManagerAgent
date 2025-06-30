@@ -254,10 +254,10 @@ func (m *MetricServiceDynamic) ApplyYAML(ctx context.Context, yamlContent string
 				}
 			}
 		} else {
-			logger.Info("리소스 변경사항 없음 - 스킵",
-				"Type", obj.GetKind(),
-				"Namespace", obj.GetNamespace(),
-				"Name", obj.GetName())
+			//logger.Info("리소스 변경사항 없음 - 스킵",
+			//	"Type", obj.GetKind(),
+			//	"Namespace", obj.GetNamespace(),
+			//	"Name", obj.GetName())
 		}
 	}
 	return nil
