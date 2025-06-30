@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -100,10 +101,18 @@ func (r *IstioRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 
+		logger.Info(string(svcConfig.Type))
+		fmt.Print(string(svcConfig.Type))
+
+		if svcConfig.Type != meshmanagerv1.CanaryType && svcConfig.Type != meshmanagerv1.StickyCanaryType {
+			logger.Info("조건 잘못됨")
+		}
+
 		if svcConfig.Type == meshmanagerv1.CanaryType || svcConfig.Type == meshmanagerv1.StickyCanaryType {
 			ef := generator.GenerateEnvoyFilter(svcConfig, &istioRoute)
 
 			logger.Info("Envoy 생성 루틴 시작")
+			fmt.Print("Envoy 생성 루틴 시작")
 
 			//if err := ctrl.SetControllerReference(&istioRoute, ef, r.Scheme); err != nil {
 			//	return ctrl.Result{}, err
