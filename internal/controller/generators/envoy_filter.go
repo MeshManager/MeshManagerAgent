@@ -72,6 +72,8 @@ func buildLuaFilterConfig(svc meshmanagerv1.ServiceConfig) *structpb.Struct {
 		luaScript = buildCanaryLuaScript(svc)
 	case baseType == meshmanagerv1.StickyCanaryType:
 		luaScript = buildStickyCanaryLuaScript(svc)
+	case baseType == meshmanagerv1.StandardType:
+		luaScript = buildStandardLuaScript(svc)
 	}
 
 	return &structpb.Struct{
@@ -85,6 +87,19 @@ func buildLuaFilterConfig(svc meshmanagerv1.ServiceConfig) *structpb.Struct {
 			}),
 		},
 	}
+}
+
+func buildStandardLuaScript(svc meshmanagerv1.ServiceConfig) string {
+
+	return fmt.Sprintf(`
+function envoy_on_request(request_handle)
+	local headers = request_handle:headers()
+  	local path = headers:get(":path")
+  
+  	if string.find(path, "^/%s") then
+		headers:add("x-canary-version","%s")
+	end
+end`, svc.Name, svc.CommitHashes[0])
 }
 
 func buildCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
