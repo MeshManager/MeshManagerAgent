@@ -116,7 +116,7 @@ function envoy_on_request(request_handle)
   
   	if string.find(path, "^/%s") then
 		local rand = math.random(0, 99)
-		headers:add("x-canary-version", rand < %d and "%s" or "%s")
+		headers:add("x-canary-version", rand > %d and "%s" or "%s")
 	end
 end`, svc.Name, ratioValue, svc.CommitHashes[0], svc.CommitHashes[1])
 }
@@ -141,7 +141,7 @@ function envoy_on_request(request_handle)
 				hash = (hash * 31 + jwt:byte(i)) %% 100
 			end
 			
-			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+			headers:add("x-canary-version", hash > %d and "%s" or "%s")
 			headers:add("x-session-id", tostring(math.floor(hash)))
 		end
 	end
@@ -178,7 +178,7 @@ function envoy_on_request(request_handle)
 				hash = (hash * 31 + jwt:byte(i)) %% 100
 			end
 			
-			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+			headers:add("x-canary-version", hash > %d and "%s" or "%s")
 %s
 		end
 	end
@@ -215,7 +215,7 @@ function envoy_on_request(request_handle)
 				hash = (hash * 31 + jwt:byte(i)) %% 100
 			end
 			
-			headers:add("x-canary-version", hash < %d and "%s" or "%s")
+			headers:add("x-canary-version", hash > %d and "%s" or "%s")
 			headers:add("x-session-id", tostring(math.floor(hash)))
 %s
 		end
