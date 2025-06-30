@@ -6,7 +6,7 @@ import (
 	"github.com/slack-go/slack"
 )
 
-func SendSlackMessage(channelID, token, message string) error {
+func SendSlackMessage(token, channelID, message string) error {
 	api := slack.New(token)
 	// PostMessage의 첫 번째 인자는 채널 ID, 두 번째 이후는 메시지 옵션입니다.
 	_, _, err := api.PostMessage(
