@@ -57,9 +57,9 @@ type ServiceConfig struct {
 type ServiceType string
 
 const (
-	StandardType     ServiceType = "Standard"
-	CanaryType       ServiceType = "Canary"
-	StickyCanaryType ServiceType = "StickyCanary"
+	StandardType     ServiceType = "StandardType"
+	CanaryType       ServiceType = "CanaryType"
+	StickyCanaryType ServiceType = "StickyCanaryType"
 )
 
 type OutlierDetection struct {
