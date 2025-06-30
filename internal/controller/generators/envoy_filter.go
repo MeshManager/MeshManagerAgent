@@ -92,6 +92,8 @@ func buildCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
 		return ""
 	}
 
+	ratioValue := *svc.Ratio
+
 	return fmt.Sprintf(`
 function envoy_on_request(request_handle)
 	local headers = request_handle:headers()
@@ -101,7 +103,7 @@ function envoy_on_request(request_handle)
 		local rand = math.random(0, 99)
 		headers:add("x-canary-version", rand < %d and "%s" or "%s")
 	end
-end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+end`, svc.Name, ratioValue, svc.CommitHashes[0], svc.CommitHashes[1])
 }
 
 func buildStickyCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
@@ -109,6 +111,8 @@ func buildStickyCanaryLuaScript(svc meshmanagerv1.ServiceConfig) string {
 		return ""
 	}
 
+	ratioValue := *svc.Ratio
+
 	return fmt.Sprintf(`
 function envoy_on_request(request_handle)
 	local headers = request_handle:headers()
@@ -126,7 +130,7 @@ function envoy_on_request(request_handle)
 			headers:add("x-session-id", tostring(math.floor(hash)))
 		end
 	end
-end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1])
+end`, svc.Name, ratioValue, svc.CommitHashes[0], svc.CommitHashes[1])
 }
 
 func buildCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
@@ -134,6 +138,8 @@ func buildCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
 		return ""
 	}
 
+	ratioValue := *svc.Ratio
+
 	// Build dependency header additions
 	var depHeaderLines []string
 	for _, dep := range svc.Dependencies {
@@ -161,13 +167,15 @@ function envoy_on_request(request_handle)
 %s
 		end
 	end
-end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
+end`, svc.Name, ratioValue, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
 }
 
 func buildStickyCanaryDependentLuaScript(svc meshmanagerv1.ServiceConfig) string {
 	if len(svc.CommitHashes) < 2 {
 		return ""
 	}
+
+	ratioValue := *svc.Ratio
 
 	// Build dependency header additions
 	var depHeaderLines []string
@@ -197,5 +205,5 @@ function envoy_on_request(request_handle)
 %s
 		end
 	end
-end`, svc.Name, svc.Ratio, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
+end`, svc.Name, ratioValue, svc.CommitHashes[0], svc.CommitHashes[1], depHeaderCode)
 }
