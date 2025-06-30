@@ -262,6 +262,34 @@ func generateIngressRoutes(svc meshmanagerv1.ServiceConfig) []*apiv1beta1.HTTPRo
 
 	var routes []*apiv1beta1.HTTPRoute
 
+	for _, dr := range svc.DarknessReleases {
+		for _, ip := range dr.IPs {
+			regexPattern := convertSingleIPToRegex(ip)
+			route := &apiv1beta1.HTTPRoute{
+				Match: []*apiv1beta1.HTTPMatchRequest{{
+					Uri: &apiv1beta1.StringMatch{
+						MatchType: &apiv1beta1.StringMatch_Prefix{Prefix: uriPrefix},
+					},
+					Headers: map[string]*apiv1beta1.StringMatch{
+						"x-envoy-external-address": {
+							MatchType: &apiv1beta1.StringMatch_Regex{
+								Regex: regexPattern,
+							},
+						},
+					},
+				}},
+				Rewrite: &apiv1beta1.HTTPRewrite{Uri: "/api"},
+				Route: []*apiv1beta1.HTTPRouteDestination{{
+					Destination: &apiv1beta1.Destination{
+						Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+						Subset: dr.CommitHash,
+					},
+				}},
+			}
+			routes = append(routes, route)
+		}
+	}
+
 	for _, hash := range svc.CommitHashes {
 		route := &apiv1beta1.HTTPRoute{
 			Match: []*apiv1beta1.HTTPMatchRequest{{
